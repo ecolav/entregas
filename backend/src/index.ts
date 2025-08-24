@@ -7,6 +7,7 @@ import { z } from 'zod';
 import multer from 'multer';
 import path from 'path';
 import fs from 'fs';
+import crypto from 'crypto';
 
 const app = express();
 const prisma = new PrismaClient();
@@ -79,6 +80,174 @@ app.delete('/clients/:id', async (req, res, next) => {
   try {
     await prisma.client.delete({ where: { id: req.params.id } });
     res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// Sectors CRUD
+const sectorSchema = z.object({
+  name: z.string().min(1),
+  description: z.string().optional().nullable(),
+  clientId: z.string().optional().nullable(),
+});
+
+app.get('/sectors', async (_req, res, next) => {
+  try {
+    const data = await prisma.sector.findMany({ include: { client: true } });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/sectors', async (req, res, next) => {
+  try {
+    const parsed = sectorSchema.parse(req.body);
+    const created = await prisma.sector.create({ data: parsed });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+app.put('/sectors/:id', async (req, res, next) => {
+  try {
+    const parsed = sectorSchema.partial().parse(req.body);
+    const updated = await prisma.sector.update({ where: { id: req.params.id }, data: parsed });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+app.delete('/sectors/:id', async (req, res, next) => {
+  try {
+    await prisma.sector.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// Beds CRUD + status
+const bedSchema = z.object({ number: z.string().min(1), sectorId: z.string().min(1), status: z.enum(['free','occupied']).optional() });
+
+app.get('/beds', async (_req, res, next) => {
+  try {
+    const data = await prisma.bed.findMany({ include: { sector: true } });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/beds', async (req, res, next) => {
+  try {
+    const parsed = bedSchema.parse(req.body);
+    const created = await prisma.bed.create({ data: { number: parsed.number, sectorId: parsed.sectorId, status: parsed.status ?? 'free', token: crypto.randomUUID() } });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+app.put('/beds/:id', async (req, res, next) => {
+  try {
+    const parsed = bedSchema.partial().parse(req.body);
+    const updated = await prisma.bed.update({ where: { id: req.params.id }, data: parsed });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+app.put('/beds/:id/status', async (req, res, next) => {
+  try {
+    const parsed = z.object({ status: z.enum(['free','occupied']) }).parse(req.body);
+    const updated = await prisma.bed.update({ where: { id: req.params.id }, data: { status: parsed.status } });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+app.delete('/beds/:id', async (req, res, next) => {
+  try {
+    await prisma.bed.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// Items CRUD
+const itemSchema = z.object({ name: z.string().min(1), sku: z.string().min(1), unit: z.string().min(1), currentStock: z.number().int().nonnegative().default(0), minimumStock: z.number().int().nonnegative().default(0) });
+
+app.get('/items', async (_req, res, next) => {
+  try {
+    const data = await prisma.linenItem.findMany();
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/items', async (req, res, next) => {
+  try {
+    const parsed = itemSchema.parse(req.body);
+    const created = await prisma.linenItem.create({ data: parsed });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+app.put('/items/:id', async (req, res, next) => {
+  try {
+    const parsed = itemSchema.partial().parse(req.body);
+    const updated = await prisma.linenItem.update({ where: { id: req.params.id }, data: parsed });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+app.delete('/items/:id', async (req, res, next) => {
+  try {
+    await prisma.linenItem.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// Orders create with stock update
+const orderItemInput = z.object({ itemId: z.string().min(1), quantity: z.number().int().positive() });
+const orderSchema = z.object({ bedId: z.string().min(1), items: z.array(orderItemInput).min(1), observations: z.string().optional().nullable(), scheduledDelivery: z.string().datetime().optional().nullable() });
+
+app.get('/orders', async (_req, res, next) => {
+  try {
+    const data = await prisma.order.findMany({ include: { items: { include: { item: true } }, bed: { include: { sector: true } } } });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/orders', async (req, res, next) => {
+  try {
+    const parsed = orderSchema.parse(req.body);
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({ data: { bedId: parsed.bedId, status: 'pending', observations: parsed.observations ?? null, scheduledDelivery: parsed.scheduledDelivery ? new Date(parsed.scheduledDelivery) : null } });
+      for (const it of parsed.items) {
+        await tx.orderItem.create({ data: { orderId: created.id, itemId: it.itemId, quantity: it.quantity } });
+        const item = await tx.linenItem.findUnique({ where: { id: it.itemId } });
+        if (item) {
+          const newStock = Math.max(0, item.currentStock - it.quantity);
+          await tx.linenItem.update({ where: { id: item.id }, data: { currentStock: newStock } });
+          await tx.stockMovement.create({ data: { itemId: item.id, type: 'out', quantity: it.quantity, reason: `Pedido ${created.id}` } });
+        }
+      }
+      return created;
+    });
+    res.status(201).json(result);
+  } catch (e) { next(e); }
+});
+
+// Stock movements
+const movementSchema = z.object({ itemId: z.string().min(1), type: z.enum(['in','out']), quantity: z.number().int().positive(), reason: z.string().min(1), orderId: z.string().optional().nullable() });
+
+app.get('/stock-movements', async (_req, res, next) => {
+  try {
+    const data = await prisma.stockMovement.findMany({ include: { item: true } });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/stock-movements', async (req, res, next) => {
+  try {
+    const parsed = movementSchema.parse(req.body);
+    const result = await prisma.$transaction(async (tx) => {
+      const created = await tx.stockMovement.create({ data: { itemId: parsed.itemId, type: parsed.type, quantity: parsed.quantity, reason: parsed.reason, orderId: parsed.orderId ?? null } });
+      const item = await tx.linenItem.findUnique({ where: { id: parsed.itemId } });
+      if (item) {
+        const newStock = parsed.type === 'in' ? item.currentStock + parsed.quantity : Math.max(0, item.currentStock - parsed.quantity);
+        await tx.linenItem.update({ where: { id: item.id }, data: { currentStock: newStock } });
+      }
+      return created;
+    });
+    res.status(201).json(result);
   } catch (e) { next(e); }
 });
 
