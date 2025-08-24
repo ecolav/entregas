@@ -19,6 +19,7 @@ model Client {
 
   sectors         Sector[]
   users           SystemUser[]
+  linenItems      LinenItem[]
 }
 
 model Sector {
