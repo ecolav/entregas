@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { BarChart3, TrendingUp, Download, Package, Bed } from 'lucide-react';
+import { BarChart3, TrendingUp, Download, Package, Bed, FileText, MessageCircle } from 'lucide-react';
 
 const Reports: React.FC = () => {
   const { orders, sectors } = useApp();
@@ -104,6 +104,79 @@ const Reports: React.FC = () => {
     URL.revokeObjectURL(url);
   };
 
+  const exportPdf = () => {
+    const title = 'Relatório de Consumo de Enxoval';
+    const period = `${dateRange.start || 'Início'} até ${dateRange.end || 'Agora'}`;
+    const sectorName = selectedSector === 'all' ? 'Todos os setores' : (sectors.find(s => s.id === selectedSector)?.name || '—');
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; color:#111827; margin:24px; }
+      h1 { font-size:20px; margin:0 0 8px; }
+      .muted { color:#6b7280; margin-bottom:16px; }
+      .card { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin:12px 0; }
+      .section-title { font-weight:600; margin-bottom:8px; }
+      table { width:100%; border-collapse:collapse; }
+      th, td { text-align:left; padding:6px 8px; border-bottom:1px solid #f3f4f6; font-size:12px; }
+    </style>
+  </head>
+  <body>
+    <h1>${title}</h1>
+    <div class="muted">Período: ${period} • Setor: ${sectorName}</div>
+    <div class="card"><div class="section-title">Resumo</div>
+      <div>Total de pedidos: <b>${reportData.totalOrders}</b></div>
+      <div>Total de itens: <b>${reportData.totalItems}</b></div>
+    </div>
+    <div class="card"><div class="section-title">Consumo por Item</div>
+      <table><thead><tr><th>Item</th><th>Qtd</th><th>Pedidos</th></tr></thead><tbody>
+      ${reportData.itemConsumption.map(i => `<tr><td>${i.name}</td><td>${i.quantity}</td><td>${i.orders}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+    <div class="card"><div class="section-title">Consumo por Setor</div>
+      <table><thead><tr><th>Setor</th><th>Pedidos</th><th>Itens</th></tr></thead><tbody>
+      ${reportData.sectorConsumption.map(s => `<tr><td>${s.name}</td><td>${s.orders}</td><td>${s.items}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+    <div class="card"><div class="section-title">Consumo por Leito (Top 10)</div>
+      <table><thead><tr><th>Setor</th><th>Leito</th><th>Pedidos</th><th>Itens</th></tr></thead><tbody>
+      ${reportData.bedConsumption.slice(0,10).map(b => `<tr><td>${b.sector}</td><td>${b.bed}</td><td>${b.orders}</td><td>${b.items}</td></tr>`).join('')}
+      </tbody></table>
+    </div>
+    <script>window.onload = () => { window.print(); };</script>
+  </body>
+</html>`;
+    const w = window.open('', 'print');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
+  const exportWhatsApp = () => {
+    const lines: string[] = [];
+    lines.push('🧾 *Relatório de Enxoval*');
+    lines.push(`Período: *${dateRange.start || 'Início'}* até *${dateRange.end || 'Agora'}*`);
+    lines.push(`Setor: *${selectedSector === 'all' ? 'Todos' : (sectors.find(s => s.id === selectedSector)?.name || '—')}*`);
+    lines.push('');
+    lines.push(`📦 Total de pedidos: *${reportData.totalOrders}*`);
+    lines.push(`🧺 Total de itens: *${reportData.totalItems}*`);
+    lines.push('');
+    const topItems = reportData.itemConsumption.slice(0, 5).map(i => `- ${i.quantity}x ${i.name} (${i.orders} pedidos)`);
+    if (topItems.length) {
+      lines.push('*Top Itens:*');
+      lines.push(...topItems);
+      lines.push('');
+    }
+    const topSectors = reportData.sectorConsumption.slice(0, 5).map(s => `- ${s.name}: ${s.orders} pedidos, ${s.items} itens`);
+    if (topSectors.length) {
+      lines.push('*Por Setor:*');
+      lines.push(...topSectors);
+    }
+    const text = encodeURIComponent(lines.join('\n'));
+    const url = `https://api.whatsapp.com/send?text=${text}`;
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -155,13 +228,27 @@ const Reports: React.FC = () => {
           </div>
         </div>
 
-        <div className="mt-4 flex justify-end">
+        <div className="mt-4 flex flex-wrap gap-2 justify-end">
           <button
             onClick={exportData}
-            className="flex items-center space-x-2 bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all"
+            className="flex items-center space-x-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all"
           >
             <Download className="w-4 h-4" />
-            <span>Exportar Relatório</span>
+            <span>Exportar JSON</span>
+          </button>
+          <button
+            onClick={exportPdf}
+            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Exportar PDF</span>
+          </button>
+          <button
+            onClick={exportWhatsApp}
+            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
+          >
+            <MessageCircle className="w-4 h-4" />
+            <span>Enviar WhatsApp</span>
           </button>
         </div>
       </div>
