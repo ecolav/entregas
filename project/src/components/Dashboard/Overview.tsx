@@ -17,11 +17,11 @@ const Overview: React.FC = () => {
   const occupiedBeds = beds.filter(bed => bed.status === 'occupied').length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
   const lowStockItems = linenItems.filter(item => item.currentStock <= item.minimumStock).length;
-  const todayOrders = orders.filter(order => {
-    const orderDate = new Date(order.createdAt);
-    const today = new Date();
-    return orderDate.toDateString() === today.toDateString();
-  }).length;
+  // const todayOrders = orders.filter(order => {
+  //   const orderDate = new Date(order.createdAt);
+  //   const today = new Date();
+  //   return orderDate.toDateString() === today.toDateString();
+  // }).length;
 
   const stats = [
     {

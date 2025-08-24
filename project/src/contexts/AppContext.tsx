@@ -54,29 +54,29 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (savedOrders) setOrders(JSON.parse(savedOrders));
       const savedStock = localStorage.getItem('app_stock');
       if (savedStock) setStockMovements(JSON.parse(savedStock));
-    } catch (err) {
+    } catch {
       // ignore corrupt data
     }
   }, []);
 
   // Persist on changes
   useEffect(() => {
-    try { localStorage.setItem('app_clients', JSON.stringify(clients)); } catch {}
+    try { localStorage.setItem('app_clients', JSON.stringify(clients)); } catch { /* no-op */ }
   }, [clients]);
   useEffect(() => {
-    try { localStorage.setItem('app_sectors', JSON.stringify(sectors)); } catch {}
+    try { localStorage.setItem('app_sectors', JSON.stringify(sectors)); } catch { /* no-op */ }
   }, [sectors]);
   useEffect(() => {
-    try { localStorage.setItem('app_beds', JSON.stringify(beds)); } catch {}
+    try { localStorage.setItem('app_beds', JSON.stringify(beds)); } catch { /* no-op */ }
   }, [beds]);
   useEffect(() => {
-    try { localStorage.setItem('app_linen', JSON.stringify(linenItems)); } catch {}
+    try { localStorage.setItem('app_linen', JSON.stringify(linenItems)); } catch { /* no-op */ }
   }, [linenItems]);
   useEffect(() => {
-    try { localStorage.setItem('app_orders', JSON.stringify(orders)); } catch {}
+    try { localStorage.setItem('app_orders', JSON.stringify(orders)); } catch { /* no-op */ }
   }, [orders]);
   useEffect(() => {
-    try { localStorage.setItem('app_stock', JSON.stringify(stockMovements)); } catch {}
+    try { localStorage.setItem('app_stock', JSON.stringify(stockMovements)); } catch { /* no-op */ }
   }, [stockMovements]);
 
   // Add sector reference to beds
@@ -206,7 +206,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Upload file
     const form = new FormData();
     form.append('file', params.file);
-    const baseUrl = (import.meta as any).env?.VITE_API_URL || 'http://localhost:4000';
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL || 'http://localhost:4000';
     const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', body: form });
     const uploadJson = await uploadRes.json();
     const url = uploadJson.url as string;

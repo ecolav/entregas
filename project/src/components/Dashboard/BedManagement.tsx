@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { Plus, Edit, Trash2, Bed, QrCode, Download, Copy, Check, Printer } from 'lucide-react';
+import { Plus, Edit, Trash2, Bed, Download, Copy, Check, Printer } from 'lucide-react';
 
 const BedManagement: React.FC = () => {
   const { beds, sectors, addBed, updateBed, deleteBed } = useApp();
@@ -42,7 +42,10 @@ const BedManagement: React.FC = () => {
     updateBed(id, { status });
   };
 
-  const handlePrintLabel = (bed: any, mode: 'A7' | 'A6' | 'THERMAL') => {
+  const handlePrintLabel = (
+    bed: { id: string; number: string; token: string; sector?: { name?: string | undefined } },
+    mode: 'A7' | 'A6' | 'THERMAL'
+  ) => {
     const url = `${window.location.origin}/pedido?token=${bed.token}`;
     const a6 = { w: 105, h: 148 };
     const a7 = { w: 74, h: 105 };
@@ -328,7 +331,7 @@ const BedManagement: React.FC = () => {
                   <Download className="w-4 h-4" />
                 </a>
                 <button
-                  onClick={() => handlePrintLabel(bed, batchMode)}
+                  onClick={() => handlePrintLabel(bed as any, batchMode)}
                   className="flex items-center justify-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all"
                   title="Imprimir etiqueta"
                 >

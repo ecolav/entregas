@@ -34,7 +34,7 @@ const ClientManagement: React.FC = () => {
     setFormData({ name: '', document: '', contactName: '', contactEmail: '', contactPhone: '', whatsappNumber: '' });
   };
 
-  const handleEdit = (client: any) => {
+  const handleEdit = (client: { id: string; name: string; document?: string; contactName?: string; contactEmail?: string; contactPhone?: string; whatsappNumber?: string }) => {
     setEditingClient(client.id);
     setFormData({
       name: client.name || '',

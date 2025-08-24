@@ -7,7 +7,7 @@ const OrderManagement: React.FC = () => {
   const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [selectedOrder, setSelectedOrder] = useState<any>(null);
+  const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receiverName, setReceiverName] = useState('');
   const [mode, setMode] = useState<'signature' | 'photo'>('signature');
@@ -81,7 +81,7 @@ const OrderManagement: React.FC = () => {
   const handleEnd = () => {
     drawing.current = false;
   };
-  const draw = (e: any) => {
+  const draw = (e: React.MouseEvent | React.TouchEvent) => {
     if (!drawing.current) return;
     const canvas = canvasRef.current;
     if (!canvas) return;

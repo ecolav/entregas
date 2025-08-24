@@ -9,7 +9,7 @@ const OrderPage: React.FC = () => {
   const { getBedByToken, linenItems, addOrder, updateBed, clients, orders, confirmOrderDelivery } = useApp();
   const location = useLocation();
   
-  const [bed, setBed] = useState<any>(null);
+  const [bed, setBed] = useState<null | import('../types').Bed>(null);
   const [cart, setCart] = useState<{ [key: string]: number }>({});
   const [observations, setObservations] = useState('');
   const [scheduledDelivery, setScheduledDelivery] = useState('');
@@ -40,7 +40,7 @@ const OrderPage: React.FC = () => {
     setCart(prev => {
       const newQuantity = (prev[itemId] || 0) + change;
       if (newQuantity <= 0) {
-        const { [itemId]: removed, ...rest } = prev;
+        const { [itemId]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [itemId]: newQuantity };
@@ -95,7 +95,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     if (toggleBedStatus) {
       const nextStatus = bed.status === 'occupied' ? 'free' : 'occupied';
       updateBed(bed.id, { status: nextStatus });
-      setBed((prev: any) => ({ ...prev, status: nextStatus }));
+      setBed(prev => (prev ? { ...prev, status: nextStatus } : prev));
     }
 
     // Generate WhatsApp link (prefer client-configured number)

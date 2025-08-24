@@ -32,7 +32,7 @@ const SectorManagement: React.FC = () => {
     setFormData({ name: '', description: '', clientId: '' });
   };
 
-  const handleEdit = (sector: any) => {
+  const handleEdit = (sector: { id: string; name: string; description?: string; clientId?: string }) => {
     setEditingSector(sector.id);
     setFormData({ name: sector.name, description: sector.description || '' });
   };

@@ -21,31 +21,6 @@ const Dashboard: React.FC = () => {
   const { user } = useAuth();
   const { sectors, beds, linenItems, orders, stockMovements, clients, systemUsers } = useApp();
 
-  // Filter data based on role
-  const scoped = useMemo(() => {
-    if (!user) {
-      return { sectors, beds, linenItems, orders, stockMovements, clients, systemUsers };
-    }
-    if (user.role === 'admin' || !user.clientId) {
-      return { sectors, beds, linenItems, orders, stockMovements, clients, systemUsers };
-    }
-    // Manager: only see own client data
-    const visibleSectors = sectors.filter(s => s.clientId === user.clientId);
-    const visibleBeds = beds.filter(b => visibleSectors.some(s => s.id === b.sectorId));
-    const visibleOrders = orders.filter(o => visibleBeds.some(b => b.id === o.bedId));
-    const visibleClients = clients.filter(c => c.id === user.clientId);
-    const visibleUsers = systemUsers.filter(u => u.clientId === user.clientId);
-    return {
-      sectors: visibleSectors,
-      beds: visibleBeds,
-      linenItems, // global catalog for now
-      orders: visibleOrders,
-      stockMovements, // keep global for now
-      clients: visibleClients,
-      systemUsers: visibleUsers,
-    };
-  }, [user, sectors, beds, linenItems, orders, stockMovements, clients, systemUsers]);
-
   const renderContent = () => {
     switch (activeSection) {
       case 'overview':

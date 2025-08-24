@@ -33,7 +33,7 @@ const UserManagement: React.FC = () => {
     setFormData({ name: '', email: '', role: 'manager', clientId: '' });
   };
 
-  const handleEdit = (user: any) => {
+  const handleEdit = (user: { id: string; name: string; email: string; role: 'admin' | 'manager'; clientId?: string }) => {
     setEditingUser(user.id);
     setFormData({
       name: user.name || '',

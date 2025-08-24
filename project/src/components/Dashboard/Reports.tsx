@@ -1,9 +1,9 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { BarChart3, TrendingUp, Download, Calendar, Package, Bed } from 'lucide-react';
+import { BarChart3, TrendingUp, Download, Package, Bed } from 'lucide-react';
 
 const Reports: React.FC = () => {
-  const { orders, linenItems, beds, sectors } = useApp();
+  const { orders, sectors } = useApp();
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedSector, setSelectedSector] = useState('all');
 

@@ -36,7 +36,9 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
     draw(e);
   };
   const handleEnd = () => { drawing.current = false; };
-  const draw = (e: any) => {
+  const draw = (
+    e: React.MouseEvent<HTMLCanvasElement> | React.TouchEvent<HTMLCanvasElement>
+  ) => {
     if (!drawing.current) return;
     const canvas = canvasRef.current; if (!canvas) return;
     const ctx = canvas.getContext('2d'); if (!ctx) return;

@@ -26,7 +26,7 @@ const LinenManagement: React.FC = () => {
     setFormData({ name: '', sku: '', unit: 'unidade', currentStock: 0, minimumStock: 0 });
   };
 
-  const handleEdit = (item: any) => {
+  const handleEdit = (item: { id: string; name: string; sku: string; unit: string; currentStock: number; minimumStock: number }) => {
     setEditingItem(item.id);
     setFormData({
       name: item.name,
