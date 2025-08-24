@@ -1,6 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { BarChart3, TrendingUp, Download, Package, Bed, FileText, MessageCircle } from 'lucide-react';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const Reports: React.FC = () => {
   const { orders, sectors } = useApp();
@@ -172,8 +173,7 @@ const Reports: React.FC = () => {
       lines.push('*Por Setor:*');
       lines.push(...topSectors);
     }
-    const text = encodeURIComponent(lines.join('\n'));
-    const url = `https://api.whatsapp.com/send?text=${text}`;
+    const url = buildWhatsAppUrl({ text: lines.join('\n') });
     window.open(url, '_blank');
   };
 

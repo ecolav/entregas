@@ -3,6 +3,7 @@ import { useApp } from '../contexts/AppContext';
 import { useLocation } from '../hooks/useLocation';
 import { Bed, Plus, Minus, MessageCircle, Calendar, AlertCircle } from 'lucide-react';
 import EcolavLogo from './EcolavLogo';
+import { buildWhatsAppUrl } from '../utils/whatsapp';
 import ConfirmDeliveryModal from './ConfirmDeliveryModal';
 
 const OrderPage: React.FC = () => {
@@ -102,11 +103,8 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     const client = clients.find(c => c.id === bed?.sector?.clientId);
     const number = client?.whatsappNumber;
     const message = generateWhatsAppMessage();
-    if (number) {
-      const sanitized = number.replace(/\D/g, '');
-      const whatsappUrl = `https://api.whatsapp.com/send?phone=${sanitized}&text=${message}&type=phone_number&app_absent=0`;
-      window.open(whatsappUrl, '_blank');
-    }
+    const whatsappUrl = buildWhatsAppUrl({ phone: number, text: decodeURIComponent(message) });
+    window.open(whatsappUrl, '_blank');
 
     setSubmitted(true);
     setIsSubmitting(false);
