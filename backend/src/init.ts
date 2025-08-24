@@ -67,7 +67,7 @@ async function ensureDatabase() {
       INDEX (clientId),
       CONSTRAINT fk_LinenItem_client FOREIGN KEY (clientId) REFERENCES Client(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS `Order` (
+    CREATE TABLE IF NOT EXISTS \`Order\` (
       id VARCHAR(191) PRIMARY KEY,
       bedId VARCHAR(191) NOT NULL,
       status ENUM('pending','preparing','delivered','cancelled') NOT NULL DEFAULT 'pending',
@@ -90,7 +90,7 @@ async function ensureDatabase() {
       orderId VARCHAR(191) NOT NULL,
       INDEX (orderId), INDEX (itemId),
       CONSTRAINT fk_OrderItem_item FOREIGN KEY (itemId) REFERENCES LinenItem(id) ON DELETE RESTRICT,
-      CONSTRAINT fk_OrderItem_order FOREIGN KEY (orderId) REFERENCES `Order`(id) ON DELETE CASCADE
+      CONSTRAINT fk_OrderItem_order FOREIGN KEY (orderId) REFERENCES \`Order\`(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
     CREATE TABLE IF NOT EXISTS StockMovement (
       id VARCHAR(191) PRIMARY KEY,
