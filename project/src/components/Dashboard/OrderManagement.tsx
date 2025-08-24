@@ -5,7 +5,6 @@ import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
 
 const OrderManagement: React.FC = () => {
   const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
