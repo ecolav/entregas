@@ -168,16 +168,19 @@ const Reports: React.FC = () => {
     lines.push(`📦 Total de pedidos: *${reportData.totalOrders}*`);
     lines.push(`🧺 Total de itens: *${reportData.totalItems}*`);
     lines.push('');
-    const topItems = reportData.itemConsumption.slice(0, 5).map(i => `- ${i.quantity}x ${i.name} (${i.orders} pedidos)`);
-    if (topItems.length) {
-      lines.push('*Top Itens:*');
-      lines.push(...topItems);
+    if (reportData.itemConsumption.length) {
+      lines.push('*Consumo por Item:*');
+      lines.push(...reportData.itemConsumption.map(i => `- ${i.name}: ${i.quantity} unidades em ${i.orders} pedidos`));
       lines.push('');
     }
-    const topSectors = reportData.sectorConsumption.slice(0, 5).map(s => `- ${s.name}: ${s.orders} pedidos, ${s.items} itens`);
-    if (topSectors.length) {
-      lines.push('*Por Setor:*');
-      lines.push(...topSectors);
+    if (reportData.sectorConsumption.length) {
+      lines.push('*Consumo por Setor:*');
+      lines.push(...reportData.sectorConsumption.map(s => `- ${s.name}: ${s.orders} pedidos, ${s.items} itens`));
+      lines.push('');
+    }
+    if (reportData.bedConsumption.length) {
+      lines.push('*Consumo por Leito (Top 10):*');
+      lines.push(...reportData.bedConsumption.slice(0, 10).map(b => `- ${b.sector} / Leito ${b.bed}: ${b.orders} pedidos, ${b.items} itens`));
     }
     const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
     const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });

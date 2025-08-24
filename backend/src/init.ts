@@ -5,7 +5,7 @@ import bcrypt from 'bcryptjs';
 async function ensureDatabase() {
   const url = process.env.DATABASE_URL || '';
   // Expected: mysql://user:pass@host:port/dbname
-  const match = url.match(/^mysql:\/\/([^:]+):([^@]+)@([^:\/]+)(?::(\d+))?\/(.+)$/);
+  const match = url.match(/^mysql:\/\/([^:]+):([^@]*)@([^:\/]+)(?::(\d+))?\/(.+)$/);
   if (!match) return;
   const [, user, password, host, port, database] = match;
 
@@ -13,10 +13,9 @@ async function ensureDatabase() {
   await conn.query(`CREATE DATABASE IF NOT EXISTS \`${database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_general_ci;`);
   await conn.end();
 
-  const db = await mysql.createConnection({ host, port: port ? Number(port) : 3306, user, password, database });
-  // Create tables if not exist (minimal schema to start)
-  await db.query(`
-    CREATE TABLE IF NOT EXISTS Client (
+  const db = await mysql.createConnection({ host, port: port ? Number(port) : 3306, user, password, database, multipleStatements: true });
+  // Create tables if not exist (minimal schema to start) - executar em sequência
+  await db.query(`CREATE TABLE IF NOT EXISTS client (
       id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(191) NOT NULL,
       document VARCHAR(191) UNIQUE NULL,
@@ -25,8 +24,8 @@ async function ensureDatabase() {
       contactPhone VARCHAR(191) NULL,
       whatsappNumber VARCHAR(32) NULL,
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS SystemUser (
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS systemuser (
       id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(191) NOT NULL,
       email VARCHAR(191) NOT NULL UNIQUE,
@@ -35,27 +34,27 @@ async function ensureDatabase() {
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       clientId VARCHAR(191) NULL,
       INDEX (clientId),
-      CONSTRAINT fk_SystemUser_client FOREIGN KEY (clientId) REFERENCES Client(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS Sector (
+      CONSTRAINT fk_systemuser_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS sector (
       id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(191) NOT NULL,
       description VARCHAR(255) NULL,
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       clientId VARCHAR(191) NULL,
       INDEX (clientId),
-      CONSTRAINT fk_Sector_client FOREIGN KEY (clientId) REFERENCES Client(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS Bed (
+      CONSTRAINT fk_sector_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS bed (
       id VARCHAR(191) PRIMARY KEY,
       number VARCHAR(64) NOT NULL,
       status ENUM('free','occupied') NOT NULL DEFAULT 'free',
       token VARCHAR(191) NOT NULL UNIQUE,
       sectorId VARCHAR(191) NOT NULL,
       INDEX (sectorId),
-      CONSTRAINT fk_Bed_sector FOREIGN KEY (sectorId) REFERENCES Sector(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS LinenItem (
+      CONSTRAINT fk_bed_sector FOREIGN KEY (sectorId) REFERENCES sector(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS linenitem (
       id VARCHAR(191) PRIMARY KEY,
       name VARCHAR(191) NOT NULL,
       sku VARCHAR(191) NOT NULL UNIQUE,
@@ -65,9 +64,9 @@ async function ensureDatabase() {
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       clientId VARCHAR(191) NULL,
       INDEX (clientId),
-      CONSTRAINT fk_LinenItem_client FOREIGN KEY (clientId) REFERENCES Client(id) ON DELETE SET NULL
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS \`Order\` (
+      CONSTRAINT fk_linenitem_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS \`order\` (
       id VARCHAR(191) PRIMARY KEY,
       bedId VARCHAR(191) NOT NULL,
       status ENUM('pending','preparing','delivered','cancelled') NOT NULL DEFAULT 'pending',
@@ -81,18 +80,18 @@ async function ensureDatabase() {
       confirmationType ENUM('signature','photo') NULL,
       confirmationUrl VARCHAR(512) NULL,
       INDEX (bedId),
-      CONSTRAINT fk_Order_bed FOREIGN KEY (bedId) REFERENCES Bed(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS OrderItem (
+      CONSTRAINT fk_order_bed FOREIGN KEY (bedId) REFERENCES bed(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS orderitem (
       id VARCHAR(191) PRIMARY KEY,
       itemId VARCHAR(191) NOT NULL,
       quantity INT NOT NULL,
       orderId VARCHAR(191) NOT NULL,
       INDEX (orderId), INDEX (itemId),
-      CONSTRAINT fk_OrderItem_item FOREIGN KEY (itemId) REFERENCES LinenItem(id) ON DELETE RESTRICT,
-      CONSTRAINT fk_OrderItem_order FOREIGN KEY (orderId) REFERENCES \`Order\`(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    CREATE TABLE IF NOT EXISTS StockMovement (
+      CONSTRAINT fk_orderitem_item FOREIGN KEY (itemId) REFERENCES linenitem(id) ON DELETE RESTRICT,
+      CONSTRAINT fk_orderitem_order FOREIGN KEY (orderId) REFERENCES \`order\`(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+  await db.query(`CREATE TABLE IF NOT EXISTS stockmovement (
       id VARCHAR(191) PRIMARY KEY,
       itemId VARCHAR(191) NOT NULL,
       type ENUM('in','out') NOT NULL,
@@ -101,9 +100,23 @@ async function ensureDatabase() {
       reason VARCHAR(255) NOT NULL,
       createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
       INDEX (itemId),
-      CONSTRAINT fk_StockMovement_item FOREIGN KEY (itemId) REFERENCES LinenItem(id) ON DELETE CASCADE
-    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-  `);
+      CONSTRAINT fk_stockmovement_item FOREIGN KEY (itemId) REFERENCES linenitem(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+  // Ensure missing columns for existing databases
+  try {
+    await db.query(`SELECT clientId FROM linenitem LIMIT 1;`);
+  } catch {
+    try { await db.query(`ALTER TABLE linenitem ADD COLUMN clientId VARCHAR(191) NULL;`); } catch {}
+    try { await db.query(`CREATE INDEX idx_linenitem_clientId ON linenitem(clientId);`); } catch {}
+    try { await db.query(`ALTER TABLE linenitem ADD CONSTRAINT fk_linenitem_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL;`); } catch {}
+  }
+
+  // Normalize confirmationType to VARCHAR for Prisma compatibility
+  try {
+    // If column is ENUM, convert to VARCHAR(32)
+    await db.query(`ALTER TABLE \`order\` MODIFY COLUMN confirmationType VARCHAR(32) NULL`);
+  } catch {}
 
   // Ensure admin exists (bootstrap pattern similar à rota)
   const [rows] = await db.query<any[]>(`SELECT id FROM SystemUser WHERE role='admin' LIMIT 1;`);

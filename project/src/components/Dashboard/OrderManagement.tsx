@@ -5,6 +5,7 @@ import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
 
 const OrderManagement: React.FC = () => {
   const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
@@ -259,14 +260,9 @@ const OrderManagement: React.FC = () => {
         onClose={() => setConfirmOpen(false)}
         onConfirm={async ({ receiverName, confirmationType, file }) => {
           if (!selectedOrder) return;
-          setIsSubmitting(true);
-          try {
-            await confirmOrderDelivery({ orderId: selectedOrder.id, receiverName, confirmationType, file });
-            setConfirmOpen(false);
-            setSelectedOrder(null);
-          } finally {
-            setIsSubmitting(false);
-          }
+          await confirmOrderDelivery({ orderId: selectedOrder.id, receiverName, confirmationType, file });
+          setConfirmOpen(false);
+          setSelectedOrder(null);
         }}
       />
     </div>

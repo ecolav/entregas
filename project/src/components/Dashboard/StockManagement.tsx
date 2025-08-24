@@ -86,13 +86,34 @@ const StockManagement: React.FC = () => {
 
   const exportWhatsApp = () => {
     const lines: string[] = [];
-    lines.push('📦 *Status do Estoque*');
+    const lowItems = visibleItems.filter(i => i.currentStock <= i.minimumStock);
+    const okItems = visibleItems.filter(i => i.currentStock > i.minimumStock);
+
+    const formatItem = (i: typeof visibleItems[number]) => [
+      `• ${i.name} (SKU ${i.sku})`,
+      `  Quantidade: ${i.currentStock} ${i.unit}`,
+      `  Mínimo: ${i.minimumStock} ${i.unit}`,
+      `  Status: ${i.currentStock <= i.minimumStock ? 'Baixo' : 'OK'}`
+    ].join('\n');
+
+    lines.push('📦 *Relatório Completo de Estoque*');
+    lines.push('');
     lines.push(`Total de itens: *${totalItems}*`);
     lines.push(`Estoque total (unid.): *${totalStock}*`);
-    if (lowStockItems.length) {
-      lines.push('⚠️ *Itens com estoque baixo:*');
-      lines.push(...lowStockItems.slice(0, 10).map(i => `- ${i.name}: ${i.currentStock}/${i.minimumStock} ${i.unit}`));
+    lines.push('');
+
+    if (lowItems.length > 0) {
+      lines.push('⚠️ *Itens com estoque baixo*');
+      lines.push('');
+      lowItems.forEach(i => { lines.push(formatItem(i)); lines.push(''); });
     }
+
+    if (okItems.length > 0) {
+      lines.push('✅ *Itens com estoque OK*');
+      lines.push('');
+      okItems.forEach(i => { lines.push(formatItem(i)); lines.push(''); });
+    }
+
     const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
     const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });
     window.open(url, '_blank');

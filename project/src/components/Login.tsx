@@ -94,8 +94,8 @@ const Login: React.FC = () => {
         <div className="mt-8 p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-600 font-medium mb-2">Credenciais de teste:</p>
           <div className="space-y-1 text-xs text-gray-500">
-            <p><span className="font-medium">Admin:</span> admin@hospital.com / 123456</p>
-            <p><span className="font-medium">Gerente:</span> gerente@hospital.com / 123456</p>
+            <p><span className="font-medium">Admin (seed):</span> admin@site.com / 123456</p>
+            <p><span className="font-medium">Admin (hospital):</span> admin@hospital.com / 123456</p>
           </div>
         </div>
       </div>

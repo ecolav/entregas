@@ -1,90 +1,59 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
 import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser, SystemUserInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
+import { useToast } from './ToastContext';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Mock data for demo
-const mockSectors: Sector[] = [
-  { id: '1', name: 'UTI', description: 'Unidade de Terapia Intensiva', createdAt: '2024-01-01T10:00:00Z', clientId: 'c1' },
-  { id: '2', name: 'Clínica Médica', description: 'Clínica Médica Geral', createdAt: '2024-01-01T10:00:00Z', clientId: 'c1' },
-  { id: '3', name: 'Pediatria', description: 'Unidade Pediátrica', createdAt: '2024-01-01T10:00:00Z', clientId: 'c1' },
-];
-
-const mockBeds: Bed[] = [
-  { id: '1', number: '201', sectorId: '1', status: 'occupied', token: 'bed-201-token-uuid' },
-  { id: '2', number: '202', sectorId: '1', status: 'free', token: 'bed-202-token-uuid' },
-  { id: '3', number: '301', sectorId: '2', status: 'occupied', token: 'bed-301-token-uuid' },
-  { id: '4', number: '401', sectorId: '3', status: 'free', token: 'bed-401-token-uuid' },
-];
-
-const mockLinenItems: LinenItem[] = [
-  { id: '1', name: 'Lençol', sku: 'LEN001', unit: 'unidade', currentStock: 50, minimumStock: 10, createdAt: '2024-01-01T10:00:00Z' },
-  { id: '2', name: 'Fronha', sku: 'FRO001', unit: 'unidade', currentStock: 30, minimumStock: 8, createdAt: '2024-01-01T10:00:00Z' },
-  { id: '3', name: 'Toalha', sku: 'TOA001', unit: 'unidade', currentStock: 25, minimumStock: 5, createdAt: '2024-01-01T10:00:00Z' },
-  { id: '4', name: 'Cobertor', sku: 'COB001', unit: 'unidade', currentStock: 8, minimumStock: 12, createdAt: '2024-01-01T10:00:00Z' },
-];
+// Sem mocks: estados iniciam vazios e carregam da API
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
-  const [sectors, setSectors] = useState<Sector[]>(mockSectors);
-  const [beds, setBeds] = useState<Bed[]>(mockBeds);
-  const [linenItems, setLinenItems] = useState<LinenItem[]>(mockLinenItems);
+  const { addToast } = useToast();
+  const [sectors, setSectors] = useState<Sector[]>([]);
+  const [beds, setBeds] = useState<Bed[]>([]);
+  const [linenItems, setLinenItems] = useState<LinenItem[]>([]);
   const [orders, setOrders] = useState<Order[]>([]);
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
-  const [clients, setClients] = useState<Client[]>([
-    { id: 'c1', name: 'Hospital Central', document: '00.000.000/0001-00', contactName: 'Mariana', contactEmail: 'contato@hospital.com', contactPhone: '(11) 99999-0000', whatsappNumber: '5511999999999', createdAt: '2024-01-01T10:00:00Z' },
-  ]);
-  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([
-    { id: 'u1', name: 'Administrador', email: 'admin@hospital.com', role: 'admin', createdAt: '2024-01-01T10:00:00Z' },
-    { id: 'u2', name: 'Gerente', email: 'gerente@hospital.com', role: 'manager', createdAt: '2024-01-01T10:00:00Z' },
-  ]);
-
+  const [clients, setClients] = useState<Client[]>([]);
+  const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
+  const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => {
     const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
     return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:4000';
   };
 
-  // Load persisted data (clients, sectors, beds, linen, orders, stock)
-  useEffect(() => {
+  const refreshAll = async () => {
+    const baseUrl = getBaseUrl();
+    const token = localStorage.getItem('token');
+    if (!baseUrl || !token) return;
+    const authHeaders = { Authorization: `Bearer ${token}` } as const;
     try {
-      const savedClients = localStorage.getItem('app_clients');
-      if (savedClients) setClients(JSON.parse(savedClients));
-      const savedSectors = localStorage.getItem('app_sectors');
-      if (savedSectors) setSectors(JSON.parse(savedSectors));
-      const savedBeds = localStorage.getItem('app_beds');
-      if (savedBeds) setBeds(JSON.parse(savedBeds));
-      const savedLinen = localStorage.getItem('app_linen');
-      if (savedLinen) setLinenItems(JSON.parse(savedLinen));
-      const savedOrders = localStorage.getItem('app_orders');
-      if (savedOrders) setOrders(JSON.parse(savedOrders));
-      const savedStock = localStorage.getItem('app_stock');
-      if (savedStock) setStockMovements(JSON.parse(savedStock));
-    } catch {
-      // ignore corrupt data
-    }
-  }, []);
+      const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
+        fetch(`${baseUrl}/clients`, { headers: authHeaders }),
+        fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
+        fetch(`${baseUrl}/beds`, { headers: authHeaders }),
+        fetch(`${baseUrl}/items`, { headers: authHeaders }),
+        fetch(`${baseUrl}/orders`, { headers: authHeaders }),
+        fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
+        fetch(`${baseUrl}/users`, { headers: authHeaders }),
+      ]);
+      if (clientsRes.ok) setClients(await clientsRes.json());
+      if (sectorsRes.ok) setSectors(await sectorsRes.json());
+      if (bedsRes.ok) setBeds(await bedsRes.json());
+      if (itemsRes.ok) setLinenItems(await itemsRes.json());
+      if (ordersRes.ok) setOrders(await ordersRes.json());
+      if (stockRes.ok) setStockMovements(await stockRes.json());
+      if (usersRes.ok) setSystemUsers(await usersRes.json());
+    } catch { /* ignore */ }
+  };
 
-  // Persist on changes
-  useEffect(() => {
-    try { localStorage.setItem('app_clients', JSON.stringify(clients)); } catch { /* no-op */ }
-  }, [clients]);
-  useEffect(() => {
-    try { localStorage.setItem('app_sectors', JSON.stringify(sectors)); } catch { /* no-op */ }
-  }, [sectors]);
-  useEffect(() => {
-    try { localStorage.setItem('app_beds', JSON.stringify(beds)); } catch { /* no-op */ }
-  }, [beds]);
-  useEffect(() => {
-    try { localStorage.setItem('app_linen', JSON.stringify(linenItems)); } catch { /* no-op */ }
-  }, [linenItems]);
-  useEffect(() => {
-    try { localStorage.setItem('app_orders', JSON.stringify(orders)); } catch { /* no-op */ }
-  }, [orders]);
-  useEffect(() => {
-    try { localStorage.setItem('app_stock', JSON.stringify(stockMovements)); } catch { /* no-op */ }
-  }, [stockMovements]);
+  const notify = (type: string) => {
+    try { new BroadcastChannel('ecolav-app').postMessage({ type }); } catch { /* no-op */ }
+  };
+
+  // Sem persistência em localStorage (exceto token no Auth)
 
   // Load from API if available
   useEffect(() => {
@@ -96,13 +65,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         const authHeaders = (() => {
           return { Authorization: `Bearer ${token}` } as const;
         })();
-        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
+        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
           fetch(`${baseUrl}/clients`, { headers: authHeaders }),
           fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
           fetch(`${baseUrl}/beds`, { headers: authHeaders }),
           fetch(`${baseUrl}/items`, { headers: authHeaders }),
           fetch(`${baseUrl}/orders`, { headers: authHeaders }),
           fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
+          fetch(`${baseUrl}/users`, { headers: authHeaders }),
         ]);
         if (clientsRes.ok) setClients(await clientsRes.json());
         if (sectorsRes.ok) setSectors(await sectorsRes.json());
@@ -110,6 +80,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
+        if (usersRes.ok) setSystemUsers(await usersRes.json());
       } catch { void 0; }
     })();
   }, []);
@@ -122,13 +93,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     (async () => {
       try {
         const authHeaders = { Authorization: `Bearer ${token}` } as const;
-        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
+        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
           fetch(`${baseUrl}/clients`, { headers: authHeaders }),
           fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
           fetch(`${baseUrl}/beds`, { headers: authHeaders }),
           fetch(`${baseUrl}/items`, { headers: authHeaders }),
           fetch(`${baseUrl}/orders`, { headers: authHeaders }),
           fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
+          fetch(`${baseUrl}/users`, { headers: authHeaders }),
         ]);
         if (clientsRes.ok) setClients(await clientsRes.json());
         if (sectorsRes.ok) setSectors(await sectorsRes.json());
@@ -136,9 +108,43 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
+        if (usersRes.ok) setSystemUsers(await usersRes.json());
       } catch { void 0; }
     })();
   }, [user]);
+
+  // Cross-tab/tab-to-dashboard updates: listen for orders-changed events and refresh orders
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    try {
+      ordersChannelRef.current = new BroadcastChannel('ecolav-app');
+      ordersChannelRef.current.onmessage = async (ev) => {
+        if (ev?.data?.type === 'orders-changed') {
+          const baseUrl = getBaseUrl();
+          const token = localStorage.getItem('token');
+          if (!baseUrl || !token) return;
+          try {
+            const res = await fetch(`${baseUrl}/orders`, { headers: { Authorization: `Bearer ${token}` } });
+            if (res.ok) setOrders(await res.json());
+          } catch { /* ignore */ }
+        }
+      };
+    } catch { /* ignore */ }
+    const onFocus = async () => {
+      const baseUrl = getBaseUrl();
+      const token = localStorage.getItem('token');
+      if (!baseUrl || !token) return;
+      try {
+        const res = await fetch(`${baseUrl}/orders`, { headers: { Authorization: `Bearer ${token}` } });
+        if (res.ok) setOrders(await res.json());
+      } catch { /* ignore */ }
+    };
+    window.addEventListener('focus', onFocus);
+    return () => {
+      try { ordersChannelRef.current?.close(); } catch { /* ignore */ }
+      window.removeEventListener('focus', onFocus);
+    };
+  }, []);
 
   // Add sector reference to beds
   const bedsWithSectors = beds.map(bed => ({
@@ -146,8 +152,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     sector: sectors.find(s => s.id === bed.sectorId)
   }));
 
+  // Ensure orders are unique by id (avoid transient duplicates on UI)
+  const uniqueOrders = React.useMemo(() => {
+    const byId = new Map<string, Order>();
+    for (const o of orders) byId.set(o.id, o);
+    return Array.from(byId.values());
+  }, [orders]);
+
   // Add item reference to orders
-  const ordersWithItems = orders.map(order => ({
+  const ordersWithItems = uniqueOrders.map(order => ({
     ...order,
     bed: bedsWithSectors.find(b => b.id === order.bedId),
     items: (order.items || []).map(orderItem => ({
@@ -317,11 +330,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setOrders(prev => [...prev, created]);
-        // refresh items stock from API
-        try {
-          const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
-          if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch { void 0; }
+        await refreshAll();
+        notify('orders-changed');
       }
     })();
   };
@@ -338,6 +348,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setOrders(prev => prev.map(o => o.id === id ? updated : o));
+        await refreshAll();
+        notify('orders-changed');
       }
     })();
   };
@@ -355,11 +367,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setStockMovements(prev => [...prev, created]);
-        // refresh items
-        try {
-          const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
-          if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch { void 0; }
+        await refreshAll();
       }
     })();
   };
@@ -380,24 +388,46 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     form.append('file', params.file);
     const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL || 'http://localhost:4000';
     const token = localStorage.getItem('token');
-    const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', headers: { Authorization: token ? `Bearer ${token}` : '' }, body: form });
-    const uploadJson = await uploadRes.json();
-    const url = uploadJson.url as string;
+    try {
+      const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', headers: { Authorization: token ? `Bearer ${token}` : '' }, body: form });
+      if (!uploadRes.ok) {
+        let message = 'Falha ao enviar comprovante';
+        try { const j = await uploadRes.json(); message = j?.error || message; } catch { /* ignore */ }
+        addToast({ type: 'error', message });
+        return;
+      }
+      const uploadJson = await uploadRes.json();
+      const url = uploadJson.url as string;
 
-    // Confirm delivery
-    const confirmRes = await fetch(`${baseUrl}/orders/${params.orderId}/confirm-delivery`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
-      body: JSON.stringify({
-        receiverName: params.receiverName,
-        confirmationType: params.confirmationType,
-        confirmationUrl: url,
-        deliveredByUserId: params.deliveredByUserId
-      })
-    });
-    const updated = await confirmRes.json();
-    // Locally update state
-    setOrders(prev => prev.map(o => o.id === params.orderId ? { ...o, ...updated } : o));
+      // Confirm delivery
+      const confirmRes = await fetch(`${baseUrl}/orders/${params.orderId}/confirm-delivery`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
+        body: JSON.stringify({
+          receiverName: params.receiverName,
+          confirmationType: params.confirmationType,
+          confirmationUrl: url,
+          deliveredByUserId: params.deliveredByUserId
+        })
+      });
+      if (!confirmRes.ok) {
+        let message = 'Falha ao confirmar entrega';
+        try { const j = await confirmRes.json(); message = j?.error || message; } catch { /* ignore */ }
+        addToast({ type: 'error', message });
+        return;
+      }
+      const updated = await confirmRes.json();
+      // Locally update state (replace, not merge, to avoid duplicações de items)
+      setOrders(prev => prev.map(o => o.id === params.orderId ? (updated as unknown as Order) : o));
+      // Best-effort: refresh orders from API para refletir joins/campos
+      try {
+        const refresh = await fetch(`${baseUrl}/orders`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
+        if (refresh.ok) setOrders(await refresh.json());
+      } catch { /* ignore */ }
+      addToast({ type: 'success', message: 'Entrega confirmada com sucesso' });
+    } catch {
+      addToast({ type: 'error', message: 'Erro de rede na confirmação' });
+    }
   };
 
   // Clients CRUD (API-aware)
@@ -469,47 +499,72 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // System Users CRUD (API-aware)
   const addSystemUser = (user: SystemUserInput) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-    if (!baseUrl) {
-      const newUser: SystemUser = { ...user, id: uuidv4(), createdAt: new Date().toISOString() };
-      setSystemUsers(prev => [...prev, newUser]);
-      return;
-    }
+    const baseUrl = getBaseUrl();
+    if (!baseUrl) return;
     (async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${baseUrl}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(user) });
-      if (res.ok) {
-        const created = await res.json();
-        setSystemUsers(prev => [...prev, created]);
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${baseUrl}/users`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
+          body: JSON.stringify(user)
+        });
+        if (res.ok) {
+          const created = await res.json();
+          setSystemUsers(prev => [...prev, created]);
+        } else {
+          let message = 'Falha ao criar usuário';
+          try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
+          addToast({ type: 'error', message });
+        }
+      } catch {
+        addToast({ type: 'error', message: 'Erro de rede ao criar usuário' });
       }
     })();
   };
 
   const updateSystemUser = (id: string, user: Partial<SystemUser> & { password?: string }) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-    if (!baseUrl) {
-      setSystemUsers(prev => prev.map(u => (u.id === id ? { ...u, ...user } : u)));
-      return;
-    }
+    const baseUrl = getBaseUrl();
+    if (!baseUrl) return;
     (async () => {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(user) });
-      if (res.ok) {
-        const updated = await res.json();
-        setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${baseUrl}/users/${id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
+          body: JSON.stringify(user)
+        });
+        if (res.ok) {
+          const updated = await res.json();
+          setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+        } else {
+          let message = 'Falha ao atualizar usuário';
+          try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
+          addToast({ type: 'error', message });
+        }
+      } catch {
+        addToast({ type: 'error', message: 'Erro de rede ao atualizar usuário' });
       }
     })();
   };
 
   const deleteSystemUser = (id: string) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-    if (!baseUrl) {
-      setSystemUsers(prev => prev.filter(u => u.id !== id));
-      return;
-    }
+    const baseUrl = getBaseUrl();
+    if (!baseUrl) return;
     (async () => {
-      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'DELETE' });
-      if (res.ok) setSystemUsers(prev => prev.filter(u => u.id !== id));
+      try {
+        const token = localStorage.getItem('token');
+        const res = await fetch(`${baseUrl}/users/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
+        if (res.ok) {
+          setSystemUsers(prev => prev.filter(u => u.id !== id));
+        } else {
+          let message = 'Falha ao excluir usuário';
+          try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
+          addToast({ type: 'error', message });
+        }
+      } catch {
+        addToast({ type: 'error', message: 'Erro de rede ao excluir usuário' });
+      }
     })();
   };
 

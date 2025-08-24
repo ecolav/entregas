@@ -12,7 +12,9 @@ import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
 const app = express();
-const prisma = new PrismaClient();
+const FALLBACK_DB_URL = 'mysql://root:@localhost:3306/main';
+const effectiveDbUrl = (process.env.DATABASE_URL && process.env.DATABASE_URL.startsWith('mysql://')) ? process.env.DATABASE_URL : FALLBACK_DB_URL;
+const prisma = new PrismaClient({ datasources: { db: { url: effectiveDbUrl } } });
 
 app.use(cors());
 app.use(express.json());

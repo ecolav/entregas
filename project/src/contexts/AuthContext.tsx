@@ -3,35 +3,13 @@ import { AuthContextType, User } from '../types';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Mock users for demo
-const mockUsers: (User & { password: string })[] = [
-  {
-    id: '1',
-    name: 'Administrador',
-    email: 'admin@hospital.com',
-    password: '123456',
-    role: 'admin',
-    clientId: undefined
-  },
-  {
-    id: '2',
-    name: 'Gerente Lavanderia',
-    email: 'gerente@hospital.com',
-    password: '123456',
-    role: 'manager',
-    clientId: 'c1'
-  }
-];
+// Sem usuários mock: sempre autenticar na API
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
     setIsLoading(false);
   }, []);
 
@@ -40,32 +18,17 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     try {
       const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
       const baseUrl = envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:4000';
-      if (baseUrl) {
-        const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
-        if (res.ok) {
-          const json = await res.json();
-          const { token, ...logged } = json as User & { token: string };
-          setUser(logged);
-          localStorage.setItem('user', JSON.stringify(logged));
-          localStorage.setItem('token', token);
-          setIsLoading(false);
-          return true;
-        }
-        // API configurada, não cair no mock em caso de erro
+      const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+      if (res.ok) {
+        const json = await res.json();
+        const { token, ...logged } = json as User & { token: string };
+        setUser(logged);
+        localStorage.setItem('token', token);
         setIsLoading(false);
-        return false;
-      } else {
-        // fallback mock
-        const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-        if (foundUser) {
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars
-          const { password, ...userWithoutPassword } = foundUser;
-          setUser(userWithoutPassword);
-          localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-          setIsLoading(false);
-          return true;
-        }
+        return true;
       }
+      setIsLoading(false);
+      return false;
     } catch {
       // ignore
     }
@@ -75,8 +38,8 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
+    // Limpeza padronizada: somente token é persistido; no logout limpamos tudo
+    try { localStorage.clear(); } catch { /* no-op */ }
   };
 
   return (
