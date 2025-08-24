@@ -1,22 +1,28 @@
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { BarChart3, TrendingUp, Download, Package, Bed, FileText, MessageCircle } from 'lucide-react';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const Reports: React.FC = () => {
-  const { orders, sectors } = useApp();
+  const { orders, sectors, clients } = useApp();
+  const { user } = useAuth();
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedSector, setSelectedSector] = useState('all');
+  const [selectedClientId, setSelectedClientId] = useState('all');
 
   // Calculate report data
+  const visibleClientId = user?.role === 'admin' ? (selectedClientId === 'all' ? undefined : selectedClientId) : user?.clientId;
+
   const reportData = useMemo(() => {
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       const matchesDateRange = !dateRange.start || !dateRange.end || 
         (orderDate >= new Date(dateRange.start) && orderDate <= new Date(dateRange.end));
       const matchesSector = selectedSector === 'all' || order.bed?.sectorId === selectedSector;
+      const matchesClient = !visibleClientId || order.bed?.sector?.clientId === visibleClientId;
       
-      return matchesDateRange && matchesSector;
+      return matchesDateRange && matchesSector && matchesClient;
     });
 
     // Items consumption
@@ -79,7 +85,7 @@ const Reports: React.FC = () => {
       sectorConsumption: Object.values(sectorConsumption).sort((a, b) => b.orders - a.orders),
       bedConsumption: Object.values(bedConsumption).sort((a, b) => b.orders - a.orders)
     };
-  }, [orders, dateRange, selectedSector]);
+  }, [orders, dateRange, selectedSector, visibleClientId]);
 
   const exportData = () => {
     const data = {
@@ -173,7 +179,8 @@ const Reports: React.FC = () => {
       lines.push('*Por Setor:*');
       lines.push(...topSectors);
     }
-    const url = buildWhatsAppUrl({ text: lines.join('\n') });
+    const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
+    const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });
     window.open(url, '_blank');
   };
 
@@ -187,6 +194,23 @@ const Reports: React.FC = () => {
       {/* Filters */}
       <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          {user?.role === 'admin' && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Cliente
+              </label>
+              <select
+                value={selectedClientId}
+                onChange={(e) => setSelectedClientId(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="all">Todos os Clientes</option>
+                {clients.map((c) => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Data Início
@@ -219,7 +243,7 @@ const Reports: React.FC = () => {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Todos os Setores</option>
-              {sectors.map((sector) => (
+              {sectors.filter(s => !visibleClientId || s.clientId === visibleClientId).map((sector) => (
                 <option key={sector.id} value={sector.id}>
                   {sector.name}
                 </option>

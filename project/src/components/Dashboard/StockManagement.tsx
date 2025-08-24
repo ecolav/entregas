@@ -1,10 +1,13 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
+import { useAuth } from '../../contexts/AuthContext';
 import { Package, TrendingUp, TrendingDown, Plus, Minus, FileText, MessageCircle } from 'lucide-react';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const StockManagement: React.FC = () => {
-  const { linenItems, addStockMovement, updateLinenItem } = useApp();
+  const { linenItems, addStockMovement, updateLinenItem, clients } = useApp();
+  const { user } = useAuth();
+  const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [movementType, setMovementType] = useState<'in' | 'out'>('in');
   const [quantity, setQuantity] = useState<number>(0);
@@ -33,9 +36,11 @@ const StockManagement: React.FC = () => {
     setReason('');
   };
 
-  const lowStockItems = linenItems.filter(item => item.currentStock <= item.minimumStock);
-  const totalItems = linenItems.length;
-  const totalStock = linenItems.reduce((sum, item) => sum + item.currentStock, 0);
+  const visibleClientId = user?.role === 'admin' ? (selectedClientId || undefined) : user?.clientId;
+  const visibleItems = linenItems.filter(i => (i.clientId ? i.clientId === visibleClientId : true));
+  const lowStockItems = visibleItems.filter(item => item.currentStock <= item.minimumStock);
+  const totalItems = visibleItems.length;
+  const totalStock = visibleItems.reduce((sum, item) => sum + item.currentStock, 0);
 
   const exportPdf = () => {
     const title = 'Status do Estoque';
@@ -88,7 +93,8 @@ const StockManagement: React.FC = () => {
       lines.push('⚠️ *Itens com estoque baixo:*');
       lines.push(...lowStockItems.slice(0, 10).map(i => `- ${i.name}: ${i.currentStock}/${i.minimumStock} ${i.unit}`));
     }
-    const url = buildWhatsAppUrl({ text: lines.join('\n') });
+    const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
+    const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });
     window.open(url, '_blank');
   };
 
@@ -100,6 +106,12 @@ const StockManagement: React.FC = () => {
           <p className="text-gray-600">Gerencie os estoques e movimentações</p>
         </div>
         <div className="flex gap-2">
+          {user?.role === 'admin' && (
+            <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+              <option value="">Todos os clientes</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
           <button onClick={exportPdf} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all">
             <FileText className="w-4 h-4" />
             <span>Exportar PDF</span>

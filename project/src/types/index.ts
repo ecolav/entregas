@@ -62,6 +62,7 @@ export interface LinenItem {
   currentStock: number;
   minimumStock: number;
   createdAt: string;
+  clientId?: string;
 }
 
 export interface OrderItem {

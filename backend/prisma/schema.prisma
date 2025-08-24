@@ -53,6 +53,8 @@ model LinenItem {
   currentStock  Int      @default(0)
   minimumStock  Int      @default(0)
   createdAt     DateTime @default(now())
+  clientId      String?
+  client        Client?  @relation(fields: [clientId], references: [id])
 
   stockMovements StockMovement[]
   orderItems     OrderItem[]

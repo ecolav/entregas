@@ -299,27 +299,47 @@ app.delete('/beds/:id', requireAuth(['admin']), async (req, res, next) => {
 });
 
 // Items CRUD
-const itemSchema = z.object({ name: z.string().min(1), sku: z.string().min(1), unit: z.string().min(1), currentStock: z.number().int().nonnegative().default(0), minimumStock: z.number().int().nonnegative().default(0) });
+const itemSchema = z.object({ name: z.string().min(1), sku: z.string().min(1), unit: z.string().min(1), currentStock: z.number().int().nonnegative().default(0), minimumStock: z.number().int().nonnegative().default(0), clientId: z.string().optional().nullable() });
 
-app.get('/items', requireAuth(['admin','manager']), async (_req, res, next) => {
+app.get('/items', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
-    const data = await prisma.linenItem.findMany();
+    let where: any = {};
+    if (req.user.role === 'manager') {
+      where = { OR: [{ clientId: null }, { clientId: req.user.clientId ?? undefined }] };
+    } else if (req.query.clientId) {
+      where = { OR: [{ clientId: null }, { clientId: String(req.query.clientId) }] };
+    }
+    const data = await prisma.linenItem.findMany({ where });
     res.json(data);
   } catch (e) { next(e); }
 });
 
-app.post('/items', requireAuth(['admin']), async (req, res, next) => {
+app.post('/items', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
     const parsed = itemSchema.parse(req.body);
-    const created = await prisma.linenItem.create({ data: parsed });
+    const clientId = req.user.role === 'manager' ? (req.user.clientId ?? null) : (parsed.clientId ?? null);
+    if (clientId !== null) {
+      const exists = await prisma.client.findUnique({ where: { id: clientId } });
+      if (!exists) return res.status(400).json({ error: 'Invalid clientId' });
+    }
+    const created = await prisma.linenItem.create({ data: { name: parsed.name, sku: parsed.sku, unit: parsed.unit, currentStock: parsed.currentStock, minimumStock: parsed.minimumStock, clientId } });
     res.status(201).json(created);
   } catch (e) { next(e); }
 });
 
-app.put('/items/:id', requireAuth(['admin']), async (req, res, next) => {
+app.put('/items/:id', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
     const parsed = itemSchema.partial().parse(req.body);
-    const updated = await prisma.linenItem.update({ where: { id: req.params.id }, data: parsed });
+    const data: any = { ...parsed };
+    if (req.user.role === 'manager') {
+      delete data.clientId; // managers cannot move items across clients
+    } else if (parsed.clientId !== undefined) {
+      data.clientId = parsed.clientId ?? null;
+    }
+    const existing = await prisma.linenItem.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).end();
+    if (req.user.role === 'manager' && existing.clientId && existing.clientId !== req.user.clientId) return res.status(403).json({ error: 'Forbidden' });
+    const updated = await prisma.linenItem.update({ where: { id: req.params.id }, data });
     res.json(updated);
   } catch (e) { next(e); }
 });
