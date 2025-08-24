@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { useToast } from '../contexts/ToastContext';
 import { Camera, PenTool } from 'lucide-react';
 
 interface ConfirmDeliveryModalProps {
@@ -14,6 +15,7 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
   const [isSubmitting, setIsSubmitting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
+  const { addToast } = useToast();
 
   useEffect(() => {
     if (open) {
@@ -68,6 +70,7 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
         if (!photoFile) return; blob = photoFile;
       }
       await onConfirm({ receiverName, confirmationType: mode, file: blob });
+      addToast({ type: 'success', message: 'Entrega confirmada com sucesso!' });
       onClose();
     } finally {
       setIsSubmitting(false);
