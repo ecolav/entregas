@@ -51,7 +51,13 @@ const SectorManagement: React.FC = () => {
           <p className="text-gray-600">Gerencie os setores do hospital</p>
         </div>
         <button
-          onClick={() => setIsAddModalOpen(true)}
+          onClick={() => {
+            if (user?.role === 'admin') {
+              const first = clients[0]?.id || '';
+              setFormData(prev => ({ ...prev, clientId: first }));
+            }
+            setIsAddModalOpen(true);
+          }}
           className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all"
         >
           <Plus className="w-5 h-5" />
