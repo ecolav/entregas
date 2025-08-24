@@ -1,7 +1,7 @@
 import React from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Menu, LogOut, User } from 'lucide-react';
-import EcolavLogo from '../EcolavLogo';
+// Logo principal (ECOLAV) em páginas autenticadas
 import { User as UserType } from '../../types';
 
 interface DashboardHeaderProps {
@@ -24,8 +24,8 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) 
           </button>
           
           <div className="flex items-center space-x-3">
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg">
-              <EcolavLogo size={28} />
+            <div className="flex items-center justify-center w-8 h-8 rounded-lg overflow-hidden">
+              <img src="/ecolav.png" alt="ECOLAV" className="h-8 w-8 object-contain" />
             </div>
             <div className="hidden sm:block">
               <h1 className="text-xl font-bold text-gray-900">ECOLAV</h1>

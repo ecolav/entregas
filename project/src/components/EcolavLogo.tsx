@@ -5,7 +5,7 @@ interface EcolavLogoProps {
   size?: number;
 }
 
-// Animated droplet logo for ECOLAV
+// Animated droplet logo for ECOLAV (usado na página de login apenas)
 const EcolavLogo: React.FC<EcolavLogoProps> = ({ className, size = 40 }) => {
   const width = size;
   const height = size + size * 0.25; // slightly taller for drop shape
