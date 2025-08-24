@@ -128,10 +128,15 @@ const Reports: React.FC = () => {
       .section-title { font-weight:600; margin-bottom:8px; }
       table { width:100%; border-collapse:collapse; }
       th, td { text-align:left; padding:6px 8px; border-bottom:1px solid #f3f4f6; font-size:12px; }
+      .brand { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+      .brand img { height:40px; }
     </style>
   </head>
   <body>
-    <h1>${title}</h1>
+    <div class="brand">
+      <img src="${window.location.origin}/ecolav.png" alt="ECOLAV" />
+      <h1>${title} • ECOLAV</h1>
+    </div>
     <div class="muted">Período: ${period} • Setor: ${sectorName}</div>
     <div class="card"><div class="section-title">Resumo</div>
       <div>Total de pedidos: <b>${reportData.totalOrders}</b></div>

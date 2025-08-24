@@ -59,10 +59,15 @@ const StockManagement: React.FC = () => {
       .badge { display:inline-block; padding:2px 6px; border-radius:999px; font-size:11px; }
       .ok { background:#d1fae5; color:#065f46; }
       .low { background:#fee2e2; color:#991b1b; }
+      .brand { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+      .brand img { height:40px; }
     </style>
   </head>
   <body>
-    <h1>${title}</h1>
+    <div class="brand">
+      <img src="${window.location.origin}/ecolav.png" alt="ECOLAV" />
+      <h1>${title} • ECOLAV</h1>
+    </div>
     <div class="muted">Resumo do estoque atual</div>
     <div class="card">
       <div>Total de itens: <b>${totalItems}</b></div>
