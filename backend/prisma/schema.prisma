@@ -55,6 +55,7 @@ model LinenItem {
   createdAt     DateTime @default(now())
 
   stockMovements StockMovement[]
+  orderItems     OrderItem[]
 }
 
 model OrderItem {
