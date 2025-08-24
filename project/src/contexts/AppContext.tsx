@@ -89,11 +89,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load from API if available
   useEffect(() => {
     const baseUrl = getBaseUrl();
+    const token = localStorage.getItem('token');
+    if (!token) return; // evita 401 antes do login
     (async () => {
       try {
         const authHeaders = (() => {
-          const token = localStorage.getItem('token');
-          return token ? { Authorization: `Bearer ${token}` } : {};
+          return { Authorization: `Bearer ${token}` } as const;
         })();
         const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
           fetch(`${baseUrl}/clients`, { headers: authHeaders }),
