@@ -130,7 +130,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/sectors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
-      if (res.ok) setSectors(prev => [...prev, await res.json()]);
+      if (res.ok) {
+        const created = await res.json();
+        setSectors(prev => [...prev, created]);
+      }
     })();
   };
 
@@ -142,7 +145,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
-      if (res.ok) setSectors(prev => prev.map(s => s.id === id ? await res.json() : s));
+      if (res.ok) {
+        const updated = await res.json();
+        setSectors(prev => prev.map(s => s.id === id ? updated : s));
+      }
     })();
   };
 
@@ -171,7 +177,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/beds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
-      if (res.ok) setBeds(prev => [...prev, await res.json()]);
+      if (res.ok) {
+        const created = await res.json();
+        setBeds(prev => [...prev, created]);
+      }
     })();
   };
 
@@ -184,7 +193,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     (async () => {
       const endpoint = Object.prototype.hasOwnProperty.call(bed, 'status') ? `${baseUrl}/beds/${id}/status` : `${baseUrl}/beds/${id}`;
       const res = await fetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
-      if (res.ok) setBeds(prev => prev.map(b => b.id === id ? await res.json() : b));
+      if (res.ok) {
+        const updated = await res.json();
+        setBeds(prev => prev.map(b => b.id === id ? updated : b));
+      }
     })();
   };
 
@@ -209,7 +221,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
-      if (res.ok) setLinenItems(prev => [...prev, await res.json()]);
+      if (res.ok) {
+        const created = await res.json();
+        setLinenItems(prev => [...prev, created]);
+      }
     })();
   };
 
@@ -221,7 +236,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
-      if (res.ok) setLinenItems(prev => prev.map(i => i.id === id ? await res.json() : i));
+      if (res.ok) {
+        const updated = await res.json();
+        setLinenItems(prev => prev.map(i => i.id === id ? updated : i));
+      }
     })();
   };
 
@@ -271,7 +289,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-      if (res.ok) setOrders(prev => prev.map(o => o.id === id ? await res.json() : o));
+      if (res.ok) {
+        const updated = await res.json();
+        setOrders(prev => prev.map(o => o.id === id ? updated : o));
+      }
     })();
   };
 
@@ -341,7 +362,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
-      if (res.ok) setClients(prev => [...prev, await res.json()]);
+      if (res.ok) {
+        const created = await res.json();
+        setClients(prev => [...prev, created]);
+      }
     })();
   };
 
@@ -353,7 +377,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
-      if (res.ok) setClients(prev => prev.map(c => (c.id === id ? await res.json() : c)));
+      if (res.ok) {
+        const updated = await res.json();
+        setClients(prev => prev.map(c => (c.id === id ? updated : c)));
+      }
     })();
   };
 
@@ -383,7 +410,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
-      if (res.ok) setSystemUsers(prev => [...prev, await res.json()]);
+      if (res.ok) {
+        const created = await res.json();
+        setSystemUsers(prev => [...prev, created]);
+      }
     })();
   };
 
@@ -395,7 +425,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const res = await fetch(`${baseUrl}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
-      if (res.ok) setSystemUsers(prev => prev.map(u => (u.id === id ? await res.json() : u)));
+      if (res.ok) {
+        const updated = await res.json();
+        setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+      }
     })();
   };
 
