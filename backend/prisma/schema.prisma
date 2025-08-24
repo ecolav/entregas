@@ -103,6 +103,7 @@ model SystemUser {
   name      String
   email     String   @unique
   role      String   // 'admin' | 'manager'
+  passwordHash String
   createdAt DateTime @default(now())
 
   clientId  String?
