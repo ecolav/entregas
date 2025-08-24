@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, ReactNode, useEffect, useRe
 import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser, SystemUserInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
+import { getApiBaseUrl } from '../config';
 import { useToast } from './ToastContext';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -19,10 +20,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [clients, setClients] = useState<Client[]>([]);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
-  const getBaseUrl = () => {
-    const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-    return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:4000';
-  };
+  const getBaseUrl = () => getApiBaseUrl();
 
   const refreshAll = async () => {
     const baseUrl = getBaseUrl();

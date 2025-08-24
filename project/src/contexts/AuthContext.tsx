@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { AuthContextType, User } from '../types';
+import { getApiBaseUrl } from '../config';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -16,8 +17,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
     try {
-      const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-      const baseUrl = envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:4000';
+      const baseUrl = getApiBaseUrl();
       const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
       if (res.ok) {
         const json = await res.json();
