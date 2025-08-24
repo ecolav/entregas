@@ -50,6 +50,9 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
           setIsLoading(false);
           return true;
         }
+        // API configurada, não cair no mock em caso de erro
+        setIsLoading(false);
+        return false;
       } else {
         // fallback mock
         const foundUser = mockUsers.find(u => u.email === email && u.password === password);
