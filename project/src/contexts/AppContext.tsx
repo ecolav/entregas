@@ -405,10 +405,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // Clients CRUD (API-aware)
+  const normalizeClient = (c: Partial<Client>): Partial<Client> => {
+    const norm: Partial<Client> = { ...c };
+    const toNullIfEmpty = (v: unknown) => (typeof v === 'string' && v.trim() === '' ? null : v);
+    norm.document = toNullIfEmpty(norm.document) as string | undefined | null;
+    norm.contactName = toNullIfEmpty(norm.contactName) as string | undefined | null;
+    norm.contactEmail = toNullIfEmpty(norm.contactEmail) as string | undefined | null;
+    norm.contactPhone = toNullIfEmpty(norm.contactPhone) as string | undefined | null;
+    if (norm.whatsappNumber !== undefined && norm.whatsappNumber !== null) {
+      const raw = String(norm.whatsappNumber);
+      norm.whatsappNumber = raw.trim() === '' ? null : raw.replace(/\D/g, '');
+    }
+    return norm;
+  };
+
   const addClient = (client: Omit<Client, 'id' | 'createdAt'>) => {
     const baseUrl = getBaseUrl();
-    // sanitize whatsapp to digits only
-    const payload = { ...client, whatsappNumber: client.whatsappNumber ? client.whatsappNumber.replace(/\D/g, '') : client.whatsappNumber } as typeof client;
+    const payload = normalizeClient(client) as Omit<Client, 'id' | 'createdAt'>;
     if (!baseUrl) {
       const newClient: Client = { ...payload, id: uuidv4(), createdAt: new Date().toISOString() } as Client;
       setClients(prev => [...prev, newClient]);
@@ -426,10 +439,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const updateClient = (id: string, client: Partial<Client>) => {
     const baseUrl = getBaseUrl();
-    const payload = { ...client } as Partial<Client>;
-    if (payload.whatsappNumber !== undefined && payload.whatsappNumber !== null) {
-      payload.whatsappNumber = payload.whatsappNumber.replace(/\D/g, '');
-    }
+    const payload = normalizeClient(client);
     if (!baseUrl) {
       setClients(prev => prev.map(c => (c.id === id ? { ...c, ...payload } : c)));
       return;
