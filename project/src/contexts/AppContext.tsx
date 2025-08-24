@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import { useAuth } from './AuthContext';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -26,6 +27,7 @@ const mockLinenItems: LinenItem[] = [
 ];
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
+  const { user } = useAuth();
   const [sectors, setSectors] = useState<Sector[]>(mockSectors);
   const [beds, setBeds] = useState<Bed[]>(mockBeds);
   const [linenItems, setLinenItems] = useState<LinenItem[]>(mockLinenItems);
@@ -108,6 +110,34 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     })();
   }, []);
+
+  // Re-load from API when user logs in (token available)
+  useEffect(() => {
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const token = localStorage.getItem('token');
+    if (!baseUrl || !token || !user) return;
+    (async () => {
+      try {
+        const authHeaders = { Authorization: `Bearer ${token}` } as const;
+        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
+          fetch(`${baseUrl}/clients`, { headers: authHeaders }),
+          fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
+          fetch(`${baseUrl}/beds`, { headers: authHeaders }),
+          fetch(`${baseUrl}/items`, { headers: authHeaders }),
+          fetch(`${baseUrl}/orders`, { headers: authHeaders }),
+          fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
+        ]);
+        if (clientsRes.ok) setClients(await clientsRes.json());
+        if (sectorsRes.ok) setSectors(await sectorsRes.json());
+        if (bedsRes.ok) setBeds(await bedsRes.json());
+        if (itemsRes.ok) setLinenItems(await itemsRes.json());
+        if (ordersRes.ok) setOrders(await ordersRes.json());
+        if (stockRes.ok) setStockMovements(await stockRes.json());
+      } catch {
+        // ignore
+      }
+    })();
+  }, [user]);
 
   // Add sector reference to beds
   const bedsWithSectors = beds.map(bed => ({
