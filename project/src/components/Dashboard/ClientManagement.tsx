@@ -212,7 +212,7 @@ const ClientManagement: React.FC = () => {
                   onClick={() => {
                     setIsAddModalOpen(false);
                     setEditingClient(null);
-                    setFormData({ name: '', document: '', contactName: '', contactEmail: '', contactPhone: '' });
+                    setFormData({ name: '', document: '', contactName: '', contactEmail: '', contactPhone: '', whatsappNumber: '' });
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
                 >

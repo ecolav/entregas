@@ -34,7 +34,7 @@ const SectorManagement: React.FC = () => {
 
   const handleEdit = (sector: { id: string; name: string; description?: string; clientId?: string }) => {
     setEditingSector(sector.id);
-    setFormData({ name: sector.name, description: sector.description || '' });
+    setFormData({ name: sector.name, description: sector.description || '', clientId: sector.clientId || '' });
   };
 
   const handleDelete = (id: string) => {
@@ -149,7 +149,7 @@ const SectorManagement: React.FC = () => {
                   onClick={() => {
                     setIsAddModalOpen(false);
                     setEditingSector(null);
-                    setFormData({ name: '', description: '' });
+                    setFormData({ name: '', description: '', clientId: '' });
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
                 >
