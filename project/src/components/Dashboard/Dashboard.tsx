@@ -1,6 +1,5 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useApp } from '../../contexts/AppContext';
 import DashboardHeader from './DashboardHeader';
 import DashboardSidebar from './DashboardSidebar';
 import Overview from './Overview';
@@ -19,7 +18,6 @@ const Dashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const { sectors, beds, linenItems, orders, stockMovements, clients, systemUsers } = useApp();
 
   const renderContent = () => {
     switch (activeSection) {
