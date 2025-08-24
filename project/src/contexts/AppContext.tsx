@@ -110,7 +110,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
-      } catch (_err) { void 0; }
+      } catch { void 0; }
     })();
   }, []);
 
@@ -136,7 +136,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
-      } catch (_err) { void 0; }
+      } catch { void 0; }
     })();
   }, [user]);
 
