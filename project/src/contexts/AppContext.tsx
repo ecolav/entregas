@@ -154,7 +154,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const ordersWithItems = orders.map(order => ({
     ...order,
     bed: bedsWithSectors.find(b => b.id === order.bedId),
-    items: order.items.map(orderItem => ({
+    items: (order.items || []).map(orderItem => ({
       ...orderItem,
       item: linenItems.find(i => i.id === orderItem.itemId)
     }))
@@ -406,14 +406,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Clients CRUD (API-aware)
   const addClient = (client: Omit<Client, 'id' | 'createdAt'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
+    // sanitize whatsapp to digits only
+    const payload = { ...client, whatsappNumber: client.whatsappNumber ? client.whatsappNumber.replace(/\D/g, '') : client.whatsappNumber } as typeof client;
     if (!baseUrl) {
-      const newClient: Client = { ...client, id: uuidv4(), createdAt: new Date().toISOString() };
+      const newClient: Client = { ...payload, id: uuidv4(), createdAt: new Date().toISOString() } as Client;
       setClients(prev => [...prev, newClient]);
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(payload) });
       if (res.ok) {
         const created = await res.json();
         setClients(prev => [...prev, created]);
@@ -422,13 +425,18 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateClient = (id: string, client: Partial<Client>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
+    const payload = { ...client } as Partial<Client>;
+    if (payload.whatsappNumber !== undefined && payload.whatsappNumber !== null) {
+      payload.whatsappNumber = payload.whatsappNumber.replace(/\D/g, '');
+    }
     if (!baseUrl) {
-      setClients(prev => prev.map(c => (c.id === id ? { ...c, ...client } : c)));
+      setClients(prev => prev.map(c => (c.id === id ? { ...c, ...payload } : c)));
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(payload) });
       if (res.ok) {
         const updated = await res.json();
         setClients(prev => prev.map(c => (c.id === id ? updated : c)));
@@ -437,14 +445,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteClient = (id: string) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setClients(prev => prev.filter(c => c.id !== id));
       setSystemUsers(prev => prev.map(u => (u.clientId === id ? { ...u, clientId: undefined } : u)));
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
       if (res.ok) {
         setClients(prev => prev.filter(c => c.id !== id));
         setSystemUsers(prev => prev.map(u => (u.clientId === id ? { ...u, clientId: undefined } : u)));
