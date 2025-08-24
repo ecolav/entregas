@@ -309,7 +309,7 @@ app.get('/items', requireAuth(['admin','manager']), async (req: any, res, next) 
     } else if (req.query.clientId) {
       where = { OR: [{ clientId: null }, { clientId: String(req.query.clientId) }] };
     }
-    const data = await prisma.linenItem.findMany({ where });
+    const data = await prisma.linenItem.findMany({ where } as any);
     res.json(data);
   } catch (e) { next(e); }
 });
@@ -322,7 +322,7 @@ app.post('/items', requireAuth(['admin','manager']), async (req: any, res, next)
       const exists = await prisma.client.findUnique({ where: { id: clientId } });
       if (!exists) return res.status(400).json({ error: 'Invalid clientId' });
     }
-    const created = await prisma.linenItem.create({ data: { name: parsed.name, sku: parsed.sku, unit: parsed.unit, currentStock: parsed.currentStock, minimumStock: parsed.minimumStock, clientId } });
+    const created = await prisma.linenItem.create({ data: { name: parsed.name, sku: parsed.sku, unit: parsed.unit, currentStock: parsed.currentStock, minimumStock: parsed.minimumStock, clientId } as any });
     res.status(201).json(created);
   } catch (e) { next(e); }
 });
@@ -338,8 +338,9 @@ app.put('/items/:id', requireAuth(['admin','manager']), async (req: any, res, ne
     }
     const existing = await prisma.linenItem.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).end();
-    if (req.user.role === 'manager' && existing.clientId && existing.clientId !== req.user.clientId) return res.status(403).json({ error: 'Forbidden' });
-    const updated = await prisma.linenItem.update({ where: { id: req.params.id }, data });
+    const existingClientId = (existing as any).clientId as string | null | undefined;
+    if (req.user.role === 'manager' && existingClientId && existingClientId !== req.user.clientId) return res.status(403).json({ error: 'Forbidden' });
+    const updated = await prisma.linenItem.update({ where: { id: req.params.id }, data: data as any });
     res.json(updated);
   } catch (e) { next(e); }
 });
