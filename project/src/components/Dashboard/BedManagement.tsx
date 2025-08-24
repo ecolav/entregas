@@ -217,7 +217,7 @@ const BedManagement: React.FC = () => {
     }
   };
 
-  const handleEdit = (bed: any) => {
+  const handleEdit = (bed: { id: string; number: string; sectorId: string; status: 'occupied' | 'free' }) => {
     setEditingBed(bed.id);
     setFormData({ number: bed.number, sectorId: bed.sectorId, status: bed.status });
   };
@@ -283,7 +283,7 @@ const BedManagement: React.FC = () => {
                   title="Selecionar para impressão em lote"
                 />
                 <button
-                  onClick={() => handleEdit(bed as any)}
+                  onClick={() => handleEdit({ id: bed.id, number: bed.number, sectorId: bed.sectorId, status: bed.status })}
                   className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                 >
                   <Edit className="w-4 h-4" />
@@ -331,7 +331,7 @@ const BedManagement: React.FC = () => {
                   <Download className="w-4 h-4" />
                 </a>
                 <button
-                  onClick={() => handlePrintLabel(bed as any, batchMode)}
+                  onClick={() => handlePrintLabel({ id: bed.id, number: bed.number, token: bed.token, sector: { name: bed.sector?.name } }, batchMode)}
                   className="flex items-center justify-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all"
                   title="Imprimir etiqueta"
                 >

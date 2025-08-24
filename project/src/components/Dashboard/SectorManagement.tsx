@@ -21,11 +21,11 @@ const SectorManagement: React.FC = () => {
       updateSector(editingSector, { ...formData, clientId: user?.role === 'admin' ? (formData.clientId || undefined) : user?.clientId });
       setEditingSector(null);
     } else {
-      const payload = {
+      const payload: { name: string; description?: string; clientId?: string } = {
         name: formData.name,
         description: formData.description,
         clientId: user?.role === 'admin' ? (formData.clientId || undefined) : user?.clientId,
-      } as any;
+      };
       addSector(payload);
       setIsAddModalOpen(false);
     }

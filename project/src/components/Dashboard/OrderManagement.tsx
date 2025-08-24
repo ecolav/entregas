@@ -10,8 +10,8 @@ const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receiverName, setReceiverName] = useState('');
-  const [mode] = useState<'signature' | 'photo'>('signature');
-  const [photoFile] = useState<File | null>(null);
+  // These are controlled by the shared ConfirmDeliveryModal component
+  // Kept minimal state here
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -74,29 +74,7 @@ const OrderManagement: React.FC = () => {
 
   // Signature drawing handlers
   const drawing = useRef(false);
-  const handleStart = (_e: React.MouseEvent | React.TouchEvent) => {
-    drawing.current = true;
-    // draw start
-  };
-  const handleEnd = () => {
-    drawing.current = false;
-  };
-  const draw = (e: React.MouseEvent | React.TouchEvent) => {
-    if (!drawing.current) return;
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    const rect = canvas.getBoundingClientRect();
-    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-    const x = clientX - rect.left;
-    const y = clientY - rect.top;
-    ctx.fillStyle = '#111827';
-    ctx.beginPath();
-    ctx.arc(x, y, 1.6, 0, Math.PI * 2);
-    ctx.fill();
-  };
+  // Signature drawing handled in ConfirmDeliveryModal
 
   const handleConfirm = async () => {
     if (!selectedOrder) return;

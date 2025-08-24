@@ -44,7 +44,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     const foundUser = mockUsers.find(u => u.email === email && u.password === password);
     
     if (foundUser) {
-      const { password: _ignored, ...userWithoutPassword } = foundUser;
+      const { password: _pw, ...userWithoutPassword } = foundUser;
       setUser(userWithoutPassword);
       localStorage.setItem('user', JSON.stringify(userWithoutPassword));
       setIsLoading(false);
