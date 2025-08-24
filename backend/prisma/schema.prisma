@@ -1,0 +1,111 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Client {
+  id              String   @id @default(cuid())
+  name            String
+  document        String?  @unique
+  contactName     String?
+  contactEmail    String?
+  contactPhone    String?
+  whatsappNumber  String?
+  createdAt       DateTime @default(now())
+
+  sectors         Sector[]
+  users           SystemUser[]
+}
+
+model Sector {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id])
+
+  beds        Bed[]
+}
+
+model Bed {
+  id        String  @id @default(cuid())
+  number    String
+  status    String  @default("free") // 'free' | 'occupied'
+  token     String  @unique
+
+  sectorId  String
+  sector    Sector  @relation(fields: [sectorId], references: [id])
+
+  orders    Order[]
+}
+
+model LinenItem {
+  id            String   @id @default(cuid())
+  name          String
+  sku           String   @unique
+  unit          String
+  currentStock  Int      @default(0)
+  minimumStock  Int      @default(0)
+  createdAt     DateTime @default(now())
+
+  stockMovements StockMovement[]
+}
+
+model OrderItem {
+  id       String   @id @default(cuid())
+  itemId   String
+  item     LinenItem @relation(fields: [itemId], references: [id])
+  quantity Int
+
+  orderId  String
+  order    Order    @relation(fields: [orderId], references: [id])
+}
+
+model Order {
+  id          String   @id @default(cuid())
+  bedId       String
+  bed         Bed      @relation(fields: [bedId], references: [id])
+  status      String   @default("pending") // 'pending' | 'preparing' | 'delivered' | 'cancelled'
+  observations String?
+  scheduledDelivery DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  items       OrderItem[]
+
+  deliveredAt       DateTime?
+  deliveredByUserId String?
+  receiverName      String?
+  confirmationType  String?   // 'signature' | 'photo'
+  confirmationUrl   String?
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  itemId    String
+  item      LinenItem @relation(fields: [itemId], references: [id])
+  type      String   // 'in' | 'out'
+  quantity  Int
+  orderId   String?
+  reason    String
+  createdAt DateTime @default(now())
+}
+
+model SystemUser {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  role      String   // 'admin' | 'manager'
+  createdAt DateTime @default(now())
+
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id])
+}
+
+
