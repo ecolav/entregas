@@ -113,20 +113,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     })();
   }, [user]);
 
-  // Cross-tab/tab-to-dashboard updates: listen for orders-changed events and refresh orders
+  // Cross-tab/tab-to-dashboard updates: listen for events and refresh data
   useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
       ordersChannelRef.current = new BroadcastChannel('ecolav-app');
       ordersChannelRef.current.onmessage = async (ev) => {
-        if (ev?.data?.type === 'orders-changed') {
-          const baseUrl = getBaseUrl();
-          const token = localStorage.getItem('token');
-          if (!baseUrl || !token) return;
-          try {
-            const res = await fetch(`${baseUrl}/orders`, { headers: { Authorization: `Bearer ${token}` } });
-            if (res.ok) setOrders(await res.json());
-          } catch { /* ignore */ }
+        const type = ev?.data?.type as string | undefined;
+        if (!type) return;
+        // For now, refresh everything on any known event to keep UI consistent
+        if (type === 'orders-changed' || type === 'beds-changed') {
+          await refreshAll();
         }
       };
     } catch { /* ignore */ }
@@ -240,6 +237,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setBeds(prev => prev.map(b => b.id === id ? { ...b, ...bed } : b));
+      // Notify other contexts to refresh
+      notify('beds-changed');
       return;
     }
     (async () => {
@@ -249,6 +248,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setBeds(prev => prev.map(b => b.id === id ? updated : b));
+        await refreshAll();
+        notify('beds-changed');
       }
     })();
   };
