@@ -22,7 +22,7 @@ const UserManagement: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload = { ...formData, clientId: formData.clientId || undefined } as any;
+    const payload: { name: string; email: string; role: 'admin' | 'manager'; clientId?: string } = { ...formData, clientId: formData.clientId || undefined };
     if (editingUser) {
       updateSystemUser(editingUser, payload);
       setEditingUser(null);

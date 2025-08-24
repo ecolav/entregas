@@ -142,7 +142,7 @@ const BedManagement: React.FC = () => {
     const bedsToPrint = visibleBeds.filter(b => selectedBedIds.length === 0 || selectedBedIds.includes(b.id));
     if (bedsToPrint.length === 0) return;
 
-    const buildLabel = (bed: any) => {
+    const buildLabel = (bed: { number: string; token: string; sector?: { name?: string } }) => {
       const url = `${window.location.origin}/pedido?token=${bed.token}`;
       // Estimate QR pixels for thermal based on 203 dpi (~8 dots/mm)
       const dotsPerMm = 8;
@@ -283,7 +283,7 @@ const BedManagement: React.FC = () => {
                   title="Selecionar para impressão em lote"
                 />
                 <button
-                  onClick={() => handleEdit(bed)}
+                  onClick={() => handleEdit(bed as any)}
                   className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                 >
                   <Edit className="w-4 h-4" />

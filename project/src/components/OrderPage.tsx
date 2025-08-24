@@ -40,7 +40,7 @@ const OrderPage: React.FC = () => {
     setCart(prev => {
       const newQuantity = (prev[itemId] || 0) + change;
       if (newQuantity <= 0) {
-        const { [itemId]: _removed, ...rest } = prev;
+        const { [itemId]: _omit, ...rest } = prev;
         return rest;
       }
       return { ...prev, [itemId]: newQuantity };
