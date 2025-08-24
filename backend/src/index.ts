@@ -42,6 +42,18 @@ app.post('/uploads', upload.single('file'), (req, res) => {
   res.status(201).json({ url });
 });
 
+// Auth (demo login)
+const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
+app.post('/auth/login', async (req, res, next) => {
+  try {
+    const parsed = loginSchema.parse(req.body);
+    const user = await prisma.systemUser.findUnique({ where: { email: parsed.email } });
+    if (!user) return res.status(401).json({ error: 'Invalid credentials' });
+    // Placeholder: no password verification (implement hashing in real scenario)
+    res.json({ id: user.id, name: user.name, email: user.email, role: user.role, clientId: user.clientId ?? undefined });
+  } catch (e) { next(e); }
+});
+
 
 // Clients
 const clientSchema = z.object({
@@ -79,6 +91,44 @@ app.put('/clients/:id', async (req, res, next) => {
 app.delete('/clients/:id', async (req, res, next) => {
   try {
     await prisma.client.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// System Users
+const systemUserSchema = z.object({
+  name: z.string().min(1),
+  email: z.string().email(),
+  role: z.enum(['admin','manager']),
+  clientId: z.string().optional().nullable(),
+});
+
+app.get('/users', async (_req, res, next) => {
+  try {
+    const data = await prisma.systemUser.findMany();
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/users', async (req, res, next) => {
+  try {
+    const parsed = systemUserSchema.parse(req.body);
+    const created = await prisma.systemUser.create({ data: parsed });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+app.put('/users/:id', async (req, res, next) => {
+  try {
+    const parsed = systemUserSchema.partial().parse(req.body);
+    const updated = await prisma.systemUser.update({ where: { id: req.params.id }, data: parsed });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+app.delete('/users/:id', async (req, res, next) => {
+  try {
+    await prisma.systemUser.delete({ where: { id: req.params.id } });
     res.status(204).end();
   } catch (e) { next(e); }
 });
@@ -222,6 +272,14 @@ app.post('/orders', async (req, res, next) => {
       return created;
     });
     res.status(201).json(result);
+  } catch (e) { next(e); }
+});
+
+app.put('/orders/:id/status', async (req, res, next) => {
+  try {
+    const parsed = z.object({ status: z.enum(['pending','preparing','delivered','cancelled']) }).parse(req.body);
+    const updated = await prisma.order.update({ where: { id: req.params.id }, data: { status: parsed.status } });
+    res.json(updated);
   } catch (e) { next(e); }
 });
 
