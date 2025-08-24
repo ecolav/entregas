@@ -4,11 +4,13 @@ import { useLocation } from '../hooks/useLocation';
 import { Bed, Plus, Minus, MessageCircle, Calendar, AlertCircle } from 'lucide-react';
 import EcolavLogo from './EcolavLogo';
 import { buildWhatsAppUrl } from '../utils/whatsapp';
+import { useToast } from '../contexts/ToastContext';
 import ConfirmDeliveryModal from './ConfirmDeliveryModal';
 
 const OrderPage: React.FC = () => {
   const { getBedByToken, linenItems, addOrder, updateBed, clients, orders, confirmOrderDelivery } = useApp();
   const location = useLocation();
+  const { addToast } = useToast();
   
   const [bed, setBed] = useState<null | import('../types').Bed>(null);
   const [cart, setCart] = useState<{ [key: string]: number }>({});
@@ -41,7 +43,7 @@ const OrderPage: React.FC = () => {
     setCart(prev => {
       const newQuantity = (prev[itemId] || 0) + change;
       if (newQuantity <= 0) {
-        const { [itemId]: _omit, ...rest } = prev;
+        const { [itemId]: _removed, ...rest } = prev;
         return rest;
       }
       return { ...prev, [itemId]: newQuantity };
@@ -105,6 +107,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     const message = generateWhatsAppMessage();
     const whatsappUrl = buildWhatsAppUrl({ phone: number, text: decodeURIComponent(message) });
     window.open(whatsappUrl, '_blank');
+    addToast({ type: 'success', message: 'Pedido enviado para o WhatsApp.' });
 
     setSubmitted(true);
     setIsSubmitting(false);

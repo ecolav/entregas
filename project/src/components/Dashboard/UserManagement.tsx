@@ -25,7 +25,7 @@ const UserManagement: React.FC = () => {
     e.preventDefault();
     const payload: { name: string; email: string; role: 'admin' | 'manager'; clientId?: string; password?: string } = { ...formData, clientId: formData.clientId || undefined };
     if (editingUser) {
-      if (!payload.password) delete (payload as any).password;
+      if (!payload.password) delete (payload as unknown as { password?: string }).password;
     }
     if (editingUser) {
       updateSystemUser(editingUser, payload);

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Search, Filter, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react';
 import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
@@ -10,10 +10,6 @@ const OrderManagement: React.FC = () => {
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [receiverName, setReceiverName] = useState('');
-  // These are controlled by the shared ConfirmDeliveryModal component
-  // Kept minimal state here
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -55,39 +51,8 @@ const OrderManagement: React.FC = () => {
     }
   };
 
-  const handleStatusChange = (orderId: string, newStatus: any) => {
+  const handleStatusChange = (orderId: string, newStatus: import('../../types').Order['status']) => {
     updateOrderStatus(orderId, newStatus);
-  };
-
-  const drawClear = () => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  };
-
-  useEffect(() => {
-    drawClear();
-  }, [confirmOpen]);
-
-  // Signature drawing handlers
-  const drawing = useRef(false);
-  // Signature drawing handled in ConfirmDeliveryModal
-
-  const handleConfirm = async () => {
-    if (!selectedOrder) return;
-    if (!receiverName) return;
-    setIsSubmitting(true);
-    try {
-      // handled by shared modal; no-op here to satisfy lint
-      setConfirmOpen(false);
-      setReceiverName('');
-    } catch (e) {
-    } finally {
-      setIsSubmitting(false);
-    }
   };
 
   return (
@@ -136,9 +101,10 @@ const OrderManagement: React.FC = () => {
             <p className="text-gray-500">Não há pedidos que correspondam aos filtros selecionados.</p>
           </div>
         ) : (
+          <>
           <div className="divide-y divide-gray-100">
             {filteredOrders.map((order) => (
-              <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors transform animate-fade-in">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
@@ -205,6 +171,11 @@ const OrderManagement: React.FC = () => {
               </div>
             ))}
           </div>
+          <style>{`
+            @keyframes fade-in { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: translateY(0) } }
+            .animate-fade-in { animation: fade-in 180ms ease-out }
+          `}</style>
+          </>
         )}
       </div>
 
@@ -291,6 +262,8 @@ const OrderManagement: React.FC = () => {
           setIsSubmitting(true);
           try {
             await confirmOrderDelivery({ orderId: selectedOrder.id, receiverName, confirmationType, file });
+            setConfirmOpen(false);
+            setSelectedOrder(null);
           } finally {
             setIsSubmitting(false);
           }

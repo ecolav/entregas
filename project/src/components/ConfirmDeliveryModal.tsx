@@ -79,8 +79,8 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-50 p-4 transition-opacity animate-fade-in">
+      <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl transform animate-scale-in">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold">Confirmar Entrega</h3>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">×</button>
@@ -139,6 +139,12 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
           </div>
         </div>
       </div>
+      <style>{`
+        @keyframes fade-in { from { opacity: 0 } to { opacity: 1 } }
+        .animate-fade-in { animation: fade-in 150ms ease-out }
+        @keyframes scale-in { from { opacity: 0; transform: translateY(6px) scale(0.98) } to { opacity: 1; transform: translateY(0) scale(1) } }
+        .animate-scale-in { animation: scale-in 160ms ease-out }
+      `}</style>
     </div>
   );
 };

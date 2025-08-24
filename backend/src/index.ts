@@ -61,7 +61,7 @@ app.get('/health', (_req, res) => {
 });
 // Uploads
 app.post('/uploads', upload.single('file'), (req, res) => {
-  const url = `/uploads/${req.file?.filename}`;
+  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file?.filename}`;
   res.status(201).json({ url });
 });
 
@@ -200,8 +200,15 @@ app.post('/sectors', requireAuth(['admin','manager']), async (req: any, res, nex
   try {
     const parsed = sectorSchema.parse(req.body);
     // managers can only create sector for their own client
-    const clientId = req.user.role === 'manager' ? req.user.clientId : (parsed.clientId ?? null);
-    const created = await prisma.sector.create({ data: { name: parsed.name, description: parsed.description ?? null, clientId } });
+    const selectedClientId = req.user.role === 'manager' ? req.user.clientId : (parsed.clientId ?? null);
+    const clientId = selectedClientId && String(selectedClientId).trim() !== '' ? selectedClientId : null;
+    if (clientId !== null) {
+      const exists = await prisma.client.findUnique({ where: { id: clientId as string } });
+      if (!exists) return res.status(400).json({ error: 'Invalid clientId' });
+    }
+    const data: any = { name: parsed.name, description: parsed.description ?? null };
+    if (clientId !== null) data.clientId = clientId;
+    const created = await prisma.sector.create({ data });
     res.status(201).json(created);
   } catch (e) { next(e); }
 });
@@ -213,7 +220,16 @@ app.put('/sectors/:id', requireAuth(['admin','manager']), async (req: any, res, 
     const existing = await prisma.sector.findUnique({ where: { id: req.params.id } });
     if (!existing) return res.status(404).end();
     if (req.user.role === 'manager' && existing.clientId && req.user.clientId !== existing.clientId) return res.status(403).json({ error: 'Forbidden' });
-    const updated = await prisma.sector.update({ where: { id: req.params.id }, data: parsed });
+    const data: any = { ...parsed };
+    if (parsed.clientId !== undefined) {
+      const normalized = String(parsed.clientId).trim();
+      data.clientId = normalized.length > 0 ? normalized : null;
+      if (data.clientId !== null) {
+        const exists = await prisma.client.findUnique({ where: { id: data.clientId } });
+        if (!exists) return res.status(400).json({ error: 'Invalid clientId' });
+      }
+    }
+    const updated = await prisma.sector.update({ where: { id: req.params.id }, data });
     res.json(updated);
   } catch (e) { next(e); }
 });
@@ -341,7 +357,7 @@ app.post('/orders', requireAuth(['admin','manager']), async (req: any, res, next
     const bed = await prisma.bed.findUnique({ where: { id: parsed.bedId }, include: { sector: true } });
     if (!bed) return res.status(400).json({ error: 'Invalid bedId' });
     if (req.user.role === 'manager' && bed.sector.clientId && req.user.clientId !== bed.sector.clientId) return res.status(403).json({ error: 'Forbidden' });
-    const result = await prisma.$transaction(async (tx) => {
+    const created = await prisma.$transaction(async (tx) => {
       const created = await tx.order.create({ data: { bedId: parsed.bedId, status: 'pending', observations: parsed.observations ?? null, scheduledDelivery: parsed.scheduledDelivery ? new Date(parsed.scheduledDelivery) : null } });
       for (const it of parsed.items) {
         await tx.orderItem.create({ data: { orderId: created.id, itemId: it.itemId, quantity: it.quantity } });
@@ -354,7 +370,8 @@ app.post('/orders', requireAuth(['admin','manager']), async (req: any, res, next
       }
       return created;
     });
-    res.status(201).json(result);
+    const full = await prisma.order.findUnique({ where: { id: created.id }, include: { items: true, bed: true } });
+    res.status(201).json(full);
   } catch (e) { next(e); }
 });
 

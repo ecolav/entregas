@@ -52,10 +52,8 @@ const SectorManagement: React.FC = () => {
         </div>
         <button
           onClick={() => {
-            if (user?.role === 'admin') {
-              const first = clients[0]?.id || '';
-              setFormData(prev => ({ ...prev, clientId: first }));
-            }
+            // Não pré-selecionar cliente para admin; forçar escolha explícita
+            if (user?.role === 'admin') setFormData(prev => ({ ...prev, clientId: '' }));
             setIsAddModalOpen(true);
           }}
           className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all"
