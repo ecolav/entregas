@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
-import { Package, TrendingUp, TrendingDown, Plus, Minus } from 'lucide-react';
+import { Package, TrendingUp, TrendingDown, Plus, Minus, FileText, MessageCircle } from 'lucide-react';
+import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const StockManagement: React.FC = () => {
   const { linenItems, addStockMovement, updateLinenItem } = useApp();
@@ -36,11 +37,78 @@ const StockManagement: React.FC = () => {
   const totalItems = linenItems.length;
   const totalStock = linenItems.reduce((sum, item) => sum + item.currentStock, 0);
 
+  const exportPdf = () => {
+    const title = 'Status do Estoque';
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>${title}</title>
+    <style>
+      body { font-family: Arial, sans-serif; color:#111827; margin:24px; }
+      h1 { font-size:20px; margin:0 0 8px; }
+      .muted { color:#6b7280; margin-bottom:16px; }
+      .card { border:1px solid #e5e7eb; border-radius:8px; padding:12px; margin:12px 0; }
+      table { width:100%; border-collapse:collapse; }
+      th, td { text-align:left; padding:6px 8px; border-bottom:1px solid #f3f4f6; font-size:12px; }
+      .badge { display:inline-block; padding:2px 6px; border-radius:999px; font-size:11px; }
+      .ok { background:#d1fae5; color:#065f46; }
+      .low { background:#fee2e2; color:#991b1b; }
+    </style>
+  </head>
+  <body>
+    <h1>${title}</h1>
+    <div class="muted">Resumo do estoque atual</div>
+    <div class="card">
+      <div>Total de itens: <b>${totalItems}</b></div>
+      <div>Estoque total (unid.): <b>${totalStock}</b></div>
+      <div>Itens com estoque baixo: <b>${lowStockItems.length}</b></div>
+    </div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Item</th><th>SKU</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead>
+        <tbody>
+          ${linenItems.map(i => `<tr><td>${i.name}</td><td>${i.sku}</td><td>${i.currentStock} ${i.unit}</td><td>${i.minimumStock} ${i.unit}</td><td><span class="badge ${i.currentStock <= i.minimumStock ? 'low' : 'ok'}">${i.currentStock <= i.minimumStock ? 'Baixo' : 'OK'}</span></td></tr>`).join('')}
+        </tbody>
+      </table>
+    </div>
+    <script>window.onload = () => { window.print(); };</script>
+  </body>
+</html>`;
+    const w = window.open('', 'print');
+    if (w) { w.document.write(html); w.document.close(); }
+  };
+
+  const exportWhatsApp = () => {
+    const lines: string[] = [];
+    lines.push('📦 *Status do Estoque*');
+    lines.push(`Total de itens: *${totalItems}*`);
+    lines.push(`Estoque total (unid.): *${totalStock}*`);
+    if (lowStockItems.length) {
+      lines.push('⚠️ *Itens com estoque baixo:*');
+      lines.push(...lowStockItems.slice(0, 10).map(i => `- ${i.name}: ${i.currentStock}/${i.minimumStock} ${i.unit}`));
+    }
+    const url = buildWhatsAppUrl({ text: lines.join('\n') });
+    window.open(url, '_blank');
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
-        <p className="text-gray-600">Gerencie os estoques e movimentações</p>
+      <div className="flex items-start justify-between">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
+          <p className="text-gray-600">Gerencie os estoques e movimentações</p>
+        </div>
+        <div className="flex gap-2">
+          <button onClick={exportPdf} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all">
+            <FileText className="w-4 h-4" />
+            <span>Exportar PDF</span>
+          </button>
+          <button onClick={exportWhatsApp} className="flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all">
+            <MessageCircle className="w-4 h-4" />
+            <span>Enviar WhatsApp</span>
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
