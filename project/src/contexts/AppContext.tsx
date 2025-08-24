@@ -321,7 +321,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
           const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch (_err) { void 0; }
+        } catch { void 0; }
       }
     })();
   };
@@ -359,7 +359,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
           const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch (_err) { void 0; }
+        } catch { void 0; }
       }
     })();
   };
