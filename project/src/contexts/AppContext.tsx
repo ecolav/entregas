@@ -41,6 +41,11 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     { id: 'u2', name: 'Gerente', email: 'gerente@hospital.com', role: 'manager', createdAt: '2024-01-01T10:00:00Z' },
   ]);
 
+  const getBaseUrl = () => {
+    const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    return envUrl && envUrl.length > 0 ? envUrl : 'http://localhost:4000';
+  };
+
   // Load persisted data (clients, sectors, beds, linen, orders, stock)
   useEffect(() => {
     try {
@@ -83,8 +88,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Load from API if available
   useEffect(() => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
-    if (!baseUrl) return;
+    const baseUrl = getBaseUrl();
     (async () => {
       try {
         const authHeaders = (() => {
@@ -113,9 +117,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Re-load from API when user logs in (token available)
   useEffect(() => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     const token = localStorage.getItem('token');
-    if (!baseUrl || !token || !user) return;
+    if (!token || !user) return;
     (async () => {
       try {
         const authHeaders = { Authorization: `Bearer ${token}` } as const;
@@ -156,7 +160,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }));
 
   const addSector = (sector: Omit<Sector, 'id' | 'createdAt'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       const newSector: Sector = { ...sector, id: uuidv4(), createdAt: new Date().toISOString() };
       setSectors(prev => [...prev, newSector]);
@@ -173,7 +177,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateSector = (id: string, sector: Partial<Sector>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setSectors(prev => prev.map(s => s.id === id ? { ...s, ...sector } : s));
       return;
@@ -189,7 +193,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteSector = (id: string) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setSectors(prev => prev.filter(s => s.id !== id));
       setBeds(prev => prev.filter(b => b.sectorId !== id));
@@ -206,7 +210,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addBed = (bed: Omit<Bed, 'id' | 'token'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       const newBed: Bed = { ...bed, id: uuidv4(), token: uuidv4() };
       setBeds(prev => [...prev, newBed]);
@@ -223,7 +227,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateBed = (id: string, bed: Partial<Bed>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setBeds(prev => prev.map(b => b.id === id ? { ...b, ...bed } : b));
       return;
@@ -240,7 +244,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteBed = (id: string) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setBeds(prev => prev.filter(b => b.id !== id));
       return;
@@ -253,7 +257,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addLinenItem = (item: Omit<LinenItem, 'id' | 'createdAt'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       const newItem: LinenItem = { ...item, id: uuidv4(), createdAt: new Date().toISOString() };
       setLinenItems(prev => [...prev, newItem]);
@@ -270,7 +274,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateLinenItem = (id: string, item: Partial<LinenItem>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setLinenItems(prev => prev.map(i => i.id === id ? { ...i, ...item } : i));
       return;
@@ -286,7 +290,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const deleteLinenItem = (id: string) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setLinenItems(prev => prev.filter(i => i.id !== id));
       return;
@@ -299,7 +303,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addOrder = (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       const newOrder: Order = { ...order, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
       setOrders(prev => [...prev, newOrder]);
@@ -326,7 +330,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const updateOrderStatus = (id: string, status: Order['status']) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status, updatedAt: new Date().toISOString() } : o));
       return;
@@ -342,7 +346,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   const addStockMovement = (movement: Omit<StockMovement, 'id' | 'createdAt'>) => {
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    const baseUrl = getBaseUrl();
     if (!baseUrl) {
       const newMovement: StockMovement = { ...movement, id: uuidv4(), createdAt: new Date().toISOString() };
       setStockMovements(prev => [...prev, newMovement]);
