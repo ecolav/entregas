@@ -17,12 +17,16 @@ const UserManagement: React.FC = () => {
     name: '',
     email: '',
     role: 'manager' as const,
-    clientId: ''
+    clientId: '',
+    password: ''
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const payload: { name: string; email: string; role: 'admin' | 'manager'; clientId?: string } = { ...formData, clientId: formData.clientId || undefined };
+    const payload: { name: string; email: string; role: 'admin' | 'manager'; clientId?: string; password?: string } = { ...formData, clientId: formData.clientId || undefined };
+    if (editingUser) {
+      if (!payload.password) delete (payload as any).password;
+    }
     if (editingUser) {
       updateSystemUser(editingUser, payload);
       setEditingUser(null);
@@ -30,7 +34,7 @@ const UserManagement: React.FC = () => {
       addSystemUser(payload);
       setIsAddModalOpen(false);
     }
-    setFormData({ name: '', email: '', role: 'manager', clientId: '' });
+    setFormData({ name: '', email: '', role: 'manager', clientId: '', password: '' });
   };
 
   const handleEdit = (user: { id: string; name: string; email: string; role: 'admin' | 'manager'; clientId?: string }) => {
@@ -132,6 +136,16 @@ const UserManagement: React.FC = () => {
                 />
               </div>
               <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Senha {editingUser ? '(deixe em branco para manter)' : ''}</label>
+                <input
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  required={!editingUser}
+                />
+              </div>
+              <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
                 <input
                   type="email"
@@ -171,7 +185,7 @@ const UserManagement: React.FC = () => {
                   onClick={() => {
                     setIsAddModalOpen(false);
                     setEditingUser(null);
-                    setFormData({ name: '', email: '', role: 'manager', clientId: '' });
+                    setFormData({ name: '', email: '', role: 'manager', clientId: '', password: '' });
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
                 >

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
-import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser } from '../types';
+import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser, SystemUserInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
 
@@ -472,7 +472,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   };
 
   // System Users CRUD (API-aware)
-  const addSystemUser = (user: Omit<SystemUser, 'id' | 'createdAt'>) => {
+  const addSystemUser = (user: SystemUserInput) => {
     const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
     if (!baseUrl) {
       const newUser: SystemUser = { ...user, id: uuidv4(), createdAt: new Date().toISOString() };
@@ -480,7 +480,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(user) });
       if (res.ok) {
         const created = await res.json();
         setSystemUsers(prev => [...prev, created]);
@@ -488,14 +489,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     })();
   };
 
-  const updateSystemUser = (id: string, user: Partial<SystemUser>) => {
+  const updateSystemUser = (id: string, user: Partial<SystemUser> & { password?: string }) => {
     const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
     if (!baseUrl) {
       setSystemUsers(prev => prev.map(u => (u.id === id ? { ...u, ...user } : u)));
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(user) });
       if (res.ok) {
         const updated = await res.json();
         setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));

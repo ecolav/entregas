@@ -28,6 +28,15 @@ export interface SystemUser {
   createdAt: string;
 }
 
+// Payload para criar/editar usuário no frontend
+export type SystemUserInput = {
+  name: string;
+  email: string;
+  role: 'admin' | 'manager';
+  clientId?: string;
+  password?: string; // opcional no update
+};
+
 export interface Sector {
   id: string;
   name: string;
@@ -113,15 +122,15 @@ export interface AppContextType {
   addLinenItem: (item: Omit<LinenItem, 'id' | 'createdAt'>) => void;
   updateLinenItem: (id: string, item: Partial<LinenItem>) => void;
   deleteLinenItem: (id: string) => void;
-  addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => string;
+  addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateOrderStatus: (id: string, status: Order['status']) => void;
   addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
   getBedByToken: (token: string) => Bed | undefined;
   addClient: (client: Omit<Client, 'id' | 'createdAt'>) => void;
   updateClient: (id: string, client: Partial<Client>) => void;
   deleteClient: (id: string) => void;
-  addSystemUser: (user: Omit<SystemUser, 'id' | 'createdAt'>) => void;
-  updateSystemUser: (id: string, user: Partial<SystemUser>) => void;
+  addSystemUser: (user: SystemUserInput) => void;
+  updateSystemUser: (id: string, user: Partial<SystemUser> & { password?: string }) => void;
   deleteSystemUser: (id: string) => void;
   confirmOrderDelivery: (params: {
     orderId: string;
