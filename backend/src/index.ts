@@ -86,6 +86,19 @@ app.post('/auth/login', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Bootstrap first admin if no users exist
+const bootstrapSchema = z.object({ name: z.string().min(1), email: z.string().email(), password: z.string().min(6) });
+app.post('/auth/bootstrap-admin', async (req, res, next) => {
+  try {
+    const count = await prisma.systemUser.count();
+    if (count > 0) return res.status(400).json({ error: 'Users already exist' });
+    const parsed = bootstrapSchema.parse(req.body);
+    const passwordHash = await bcrypt.hash(parsed.password, 10);
+    const created = await prisma.systemUser.create({ data: { name: parsed.name, email: parsed.email, role: 'admin', passwordHash } });
+    res.status(201).json({ id: created.id, name: created.name, email: created.email, role: created.role });
+  } catch (e) { next(e); }
+});
+
 // Clients
 const clientSchema = z.object({
   name: z.string().min(1),
