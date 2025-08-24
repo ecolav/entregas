@@ -85,13 +85,17 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     if (!baseUrl) return;
     (async () => {
       try {
+        const authHeaders = (() => {
+          const token = localStorage.getItem('token');
+          return token ? { Authorization: `Bearer ${token}` } : {};
+        })();
         const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
-          fetch(`${baseUrl}/clients`),
-          fetch(`${baseUrl}/sectors`),
-          fetch(`${baseUrl}/beds`),
-          fetch(`${baseUrl}/items`),
-          fetch(`${baseUrl}/orders`),
-          fetch(`${baseUrl}/stock-movements`),
+          fetch(`${baseUrl}/clients`, { headers: authHeaders }),
+          fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
+          fetch(`${baseUrl}/beds`, { headers: authHeaders }),
+          fetch(`${baseUrl}/items`, { headers: authHeaders }),
+          fetch(`${baseUrl}/orders`, { headers: authHeaders }),
+          fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
         ]);
         if (clientsRes.ok) setClients(await clientsRes.json());
         if (sectorsRes.ok) setSectors(await sectorsRes.json());
@@ -129,7 +133,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/sectors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/sectors`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(sector) });
       if (res.ok) {
         const created = await res.json();
         setSectors(prev => [...prev, created]);
@@ -144,7 +149,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(sector) });
       if (res.ok) {
         const updated = await res.json();
         setSectors(prev => prev.map(s => s.id === id ? updated : s));
@@ -160,7 +166,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
       if (res.ok) {
         setSectors(prev => prev.filter(s => s.id !== id));
         setBeds(prev => prev.filter(b => b.sectorId !== id));
@@ -176,7 +183,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/beds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/beds`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(bed) });
       if (res.ok) {
         const created = await res.json();
         setBeds(prev => [...prev, created]);
@@ -191,8 +199,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
+      const token = localStorage.getItem('token');
       const endpoint = Object.prototype.hasOwnProperty.call(bed, 'status') ? `${baseUrl}/beds/${id}/status` : `${baseUrl}/beds/${id}`;
-      const res = await fetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
+      const res = await fetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(bed) });
       if (res.ok) {
         const updated = await res.json();
         setBeds(prev => prev.map(b => b.id === id ? updated : b));
@@ -207,7 +216,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/beds/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/beds/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
       if (res.ok) setBeds(prev => prev.filter(b => b.id !== id));
     })();
   };
@@ -220,7 +230,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(item) });
       if (res.ok) {
         const created = await res.json();
         setLinenItems(prev => [...prev, created]);
@@ -235,7 +246,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(item) });
       if (res.ok) {
         const updated = await res.json();
         setLinenItems(prev => prev.map(i => i.id === id ? updated : i));
@@ -250,7 +262,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'DELETE' });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
       if (res.ok) setLinenItems(prev => prev.filter(i => i.id !== id));
     })();
   };
@@ -268,13 +281,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bedId: order.bedId, items: order.items, observations: order.observations, scheduledDelivery: order.scheduledDelivery }) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify({ bedId: order.bedId, items: order.items, observations: order.observations, scheduledDelivery: order.scheduledDelivery }) });
       if (res.ok) {
         const created = await res.json();
         setOrders(prev => [...prev, created]);
         // refresh items stock from API
         try {
-          const itemsRes = await fetch(`${baseUrl}/items`);
+          const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
         } catch {}
       }
@@ -288,7 +302,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify({ status }) });
       if (res.ok) {
         const updated = await res.json();
         setOrders(prev => prev.map(o => o.id === id ? updated : o));
@@ -304,13 +319,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       return;
     }
     (async () => {
-      const res = await fetch(`${baseUrl}/stock-movements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movement) });
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/stock-movements`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(movement) });
       if (res.ok) {
         const created = await res.json();
         setStockMovements(prev => [...prev, created]);
         // refresh items
         try {
-          const itemsRes = await fetch(`${baseUrl}/items`);
+          const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
         } catch {}
       }
@@ -332,14 +348,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const form = new FormData();
     form.append('file', params.file);
     const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL || 'http://localhost:4000';
-    const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', body: form });
+    const token = localStorage.getItem('token');
+    const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', headers: { Authorization: token ? `Bearer ${token}` : '' }, body: form });
     const uploadJson = await uploadRes.json();
     const url = uploadJson.url as string;
 
     // Confirm delivery
     const confirmRes = await fetch(`${baseUrl}/orders/${params.orderId}/confirm-delivery`, {
       method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
       body: JSON.stringify({
         receiverName: params.receiverName,
         confirmationType: params.confirmationType,

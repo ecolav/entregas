@@ -42,9 +42,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       if (baseUrl) {
         const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
         if (res.ok) {
-          const logged: User = await res.json();
+          const json = await res.json();
+          const { token, ...logged } = json as User & { token: string };
           setUser(logged);
           localStorage.setItem('user', JSON.stringify(logged));
+          localStorage.setItem('token', token);
           setIsLoading(false);
           return true;
         }
@@ -69,6 +71,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   const logout = () => {
     setUser(null);
     localStorage.removeItem('user');
+    localStorage.removeItem('token');
   };
 
   return (
