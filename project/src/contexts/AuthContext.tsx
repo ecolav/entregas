@@ -37,20 +37,31 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
 
   const login = async (email: string, password: string): Promise<boolean> => {
     setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    const foundUser = mockUsers.find(u => u.email === email && u.password === password);
-    
-    if (foundUser) {
-      const { password: _pw, ...userWithoutPassword } = foundUser; // eslint-disable-line @typescript-eslint/no-unused-vars
-      setUser(userWithoutPassword);
-      localStorage.setItem('user', JSON.stringify(userWithoutPassword));
-      setIsLoading(false);
-      return true;
+    try {
+      const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+      if (baseUrl) {
+        const res = await fetch(`${baseUrl}/auth/login`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) });
+        if (res.ok) {
+          const logged: User = await res.json();
+          setUser(logged);
+          localStorage.setItem('user', JSON.stringify(logged));
+          setIsLoading(false);
+          return true;
+        }
+      } else {
+        // fallback mock
+        const foundUser = mockUsers.find(u => u.email === email && u.password === password);
+        if (foundUser) {
+          const { password: _pw, ...userWithoutPassword } = foundUser;
+          setUser(userWithoutPassword);
+          localStorage.setItem('user', JSON.stringify(userWithoutPassword));
+          setIsLoading(false);
+          return true;
+        }
+      }
+    } catch {
+      // ignore
     }
-    
     setIsLoading(false);
     return false;
   };

@@ -331,34 +331,84 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     setOrders(prev => prev.map(o => o.id === params.orderId ? { ...o, ...updated } : o));
   };
 
-  // Clients CRUD
+  // Clients CRUD (API-aware)
   const addClient = (client: Omit<Client, 'id' | 'createdAt'>) => {
-    const newClient: Client = { ...client, id: uuidv4(), createdAt: new Date().toISOString() };
-    setClients(prev => [...prev, newClient]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newClient: Client = { ...client, id: uuidv4(), createdAt: new Date().toISOString() };
+      setClients(prev => [...prev, newClient]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/clients`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+      if (res.ok) setClients(prev => [...prev, await res.json()]);
+    })();
   };
 
   const updateClient = (id: string, client: Partial<Client>) => {
-    setClients(prev => prev.map(c => (c.id === id ? { ...c, ...client } : c)));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setClients(prev => prev.map(c => (c.id === id ? { ...c, ...client } : c)));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(client) });
+      if (res.ok) setClients(prev => prev.map(c => (c.id === id ? await res.json() : c)));
+    })();
   };
 
   const deleteClient = (id: string) => {
-    setClients(prev => prev.filter(c => c.id !== id));
-    // Optionally detach users from this client
-    setSystemUsers(prev => prev.map(u => (u.clientId === id ? { ...u, clientId: undefined } : u)));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setClients(prev => prev.filter(c => c.id !== id));
+      setSystemUsers(prev => prev.map(u => (u.clientId === id ? { ...u, clientId: undefined } : u)));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/clients/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setClients(prev => prev.filter(c => c.id !== id));
+        setSystemUsers(prev => prev.map(u => (u.clientId === id ? { ...u, clientId: undefined } : u)));
+      }
+    })();
   };
 
-  // System Users CRUD
+  // System Users CRUD (API-aware)
   const addSystemUser = (user: Omit<SystemUser, 'id' | 'createdAt'>) => {
-    const newUser: SystemUser = { ...user, id: uuidv4(), createdAt: new Date().toISOString() };
-    setSystemUsers(prev => [...prev, newUser]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newUser: SystemUser = { ...user, id: uuidv4(), createdAt: new Date().toISOString() };
+      setSystemUsers(prev => [...prev, newUser]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/users`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+      if (res.ok) setSystemUsers(prev => [...prev, await res.json()]);
+    })();
   };
 
   const updateSystemUser = (id: string, user: Partial<SystemUser>) => {
-    setSystemUsers(prev => prev.map(u => (u.id === id ? { ...u, ...user } : u)));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setSystemUsers(prev => prev.map(u => (u.id === id ? { ...u, ...user } : u)));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(user) });
+      if (res.ok) setSystemUsers(prev => prev.map(u => (u.id === id ? await res.json() : u)));
+    })();
   };
 
   const deleteSystemUser = (id: string) => {
-    setSystemUsers(prev => prev.filter(u => u.id !== id));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setSystemUsers(prev => prev.filter(u => u.id !== id));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/users/${id}`, { method: 'DELETE' });
+      if (res.ok) setSystemUsers(prev => prev.filter(u => u.id !== id));
+    })();
   };
 
   return (
