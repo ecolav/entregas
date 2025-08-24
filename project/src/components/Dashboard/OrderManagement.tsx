@@ -9,7 +9,7 @@ const OrderManagement: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [receiverName, setReceiverName] = useState('');
+  // receiver handled by ConfirmDeliveryModal
 
   const filteredOrders = orders.filter(order => {
     const matchesSearch = 
@@ -212,7 +212,7 @@ const OrderManagement: React.FC = () => {
               <div>
                 <h4 className="font-medium text-gray-900 mb-2">Itens Solicitados</h4>
                 <div className="space-y-2">
-                  {selectedOrder.items.map((item: any, index: number) => (
+                  {selectedOrder.items.map((item: import('../../types').OrderItem, index: number) => (
                     <div key={index} className="flex justify-between items-center bg-gray-50 p-3 rounded-lg">
                       <div>
                         <p className="font-medium">{item.item?.name}</p>
