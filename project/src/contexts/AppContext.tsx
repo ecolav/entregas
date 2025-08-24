@@ -79,6 +79,32 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     try { localStorage.setItem('app_stock', JSON.stringify(stockMovements)); } catch { /* no-op */ }
   }, [stockMovements]);
 
+  // Load from API if available
+  useEffect(() => {
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) return;
+    (async () => {
+      try {
+        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes] = await Promise.all([
+          fetch(`${baseUrl}/clients`),
+          fetch(`${baseUrl}/sectors`),
+          fetch(`${baseUrl}/beds`),
+          fetch(`${baseUrl}/items`),
+          fetch(`${baseUrl}/orders`),
+          fetch(`${baseUrl}/stock-movements`),
+        ]);
+        if (clientsRes.ok) setClients(await clientsRes.json());
+        if (sectorsRes.ok) setSectors(await sectorsRes.json());
+        if (bedsRes.ok) setBeds(await bedsRes.json());
+        if (itemsRes.ok) setLinenItems(await itemsRes.json());
+        if (ordersRes.ok) setOrders(await ordersRes.json());
+        if (stockRes.ok) setStockMovements(await stockRes.json());
+      } catch {
+        // ignore API load failure, stay with local state
+      }
+    })();
+  }, []);
+
   // Add sector reference to beds
   const bedsWithSectors = beds.map(bed => ({
     ...bed,
@@ -96,100 +122,178 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }));
 
   const addSector = (sector: Omit<Sector, 'id' | 'createdAt'>) => {
-    const newSector: Sector = {
-      ...sector,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setSectors(prev => [...prev, newSector]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newSector: Sector = { ...sector, id: uuidv4(), createdAt: new Date().toISOString() };
+      setSectors(prev => [...prev, newSector]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/sectors`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
+      if (res.ok) setSectors(prev => [...prev, await res.json()]);
+    })();
   };
 
   const updateSector = (id: string, sector: Partial<Sector>) => {
-    setSectors(prev => prev.map(s => s.id === id ? { ...s, ...sector } : s));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setSectors(prev => prev.map(s => s.id === id ? { ...s, ...sector } : s));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(sector) });
+      if (res.ok) setSectors(prev => prev.map(s => s.id === id ? await res.json() : s));
+    })();
   };
 
   const deleteSector = (id: string) => {
-    setSectors(prev => prev.filter(s => s.id !== id));
-    setBeds(prev => prev.filter(b => b.sectorId !== id));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setSectors(prev => prev.filter(s => s.id !== id));
+      setBeds(prev => prev.filter(b => b.sectorId !== id));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/sectors/${id}`, { method: 'DELETE' });
+      if (res.ok) {
+        setSectors(prev => prev.filter(s => s.id !== id));
+        setBeds(prev => prev.filter(b => b.sectorId !== id));
+      }
+    })();
   };
 
   const addBed = (bed: Omit<Bed, 'id' | 'token'>) => {
-    const newBed: Bed = {
-      ...bed,
-      id: uuidv4(),
-      token: uuidv4()
-    };
-    setBeds(prev => [...prev, newBed]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newBed: Bed = { ...bed, id: uuidv4(), token: uuidv4() };
+      setBeds(prev => [...prev, newBed]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/beds`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
+      if (res.ok) setBeds(prev => [...prev, await res.json()]);
+    })();
   };
 
   const updateBed = (id: string, bed: Partial<Bed>) => {
-    setBeds(prev => prev.map(b => b.id === id ? { ...b, ...bed } : b));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setBeds(prev => prev.map(b => b.id === id ? { ...b, ...bed } : b));
+      return;
+    }
+    (async () => {
+      const endpoint = Object.prototype.hasOwnProperty.call(bed, 'status') ? `${baseUrl}/beds/${id}/status` : `${baseUrl}/beds/${id}`;
+      const res = await fetch(endpoint, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(bed) });
+      if (res.ok) setBeds(prev => prev.map(b => b.id === id ? await res.json() : b));
+    })();
   };
 
   const deleteBed = (id: string) => {
-    setBeds(prev => prev.filter(b => b.id !== id));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setBeds(prev => prev.filter(b => b.id !== id));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/beds/${id}`, { method: 'DELETE' });
+      if (res.ok) setBeds(prev => prev.filter(b => b.id !== id));
+    })();
   };
 
   const addLinenItem = (item: Omit<LinenItem, 'id' | 'createdAt'>) => {
-    const newItem: LinenItem = {
-      ...item,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setLinenItems(prev => [...prev, newItem]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newItem: LinenItem = { ...item, id: uuidv4(), createdAt: new Date().toISOString() };
+      setLinenItems(prev => [...prev, newItem]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      if (res.ok) setLinenItems(prev => [...prev, await res.json()]);
+    })();
   };
 
   const updateLinenItem = (id: string, item: Partial<LinenItem>) => {
-    setLinenItems(prev => prev.map(i => i.id === id ? { ...i, ...item } : i));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setLinenItems(prev => prev.map(i => i.id === id ? { ...i, ...item } : i));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(item) });
+      if (res.ok) setLinenItems(prev => prev.map(i => i.id === id ? await res.json() : i));
+    })();
   };
 
   const deleteLinenItem = (id: string) => {
-    setLinenItems(prev => prev.filter(i => i.id !== id));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setLinenItems(prev => prev.filter(i => i.id !== id));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/items/${id}`, { method: 'DELETE' });
+      if (res.ok) setLinenItems(prev => prev.filter(i => i.id !== id));
+    })();
   };
 
-  const addOrder = (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>): string => {
-    const newOrder: Order = {
-      ...order,
-      id: uuidv4(),
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString()
-    };
-    setOrders(prev => [...prev, newOrder]);
-
-    // Update stock
-    order.items.forEach(orderItem => {
-      const item = linenItems.find(i => i.id === orderItem.itemId);
-      if (item) {
-        updateLinenItem(item.id, {
-          currentStock: Math.max(0, item.currentStock - orderItem.quantity)
-        });
-
-        // Add stock movement
-        addStockMovement({
-          itemId: item.id,
-          type: 'out',
-          quantity: orderItem.quantity,
-          orderId: newOrder.id,
-          reason: `Pedido ${newOrder.id}`
-        });
+  const addOrder = (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => {
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newOrder: Order = { ...order, id: uuidv4(), createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+      setOrders(prev => [...prev, newOrder]);
+      // local stock update
+      order.items.forEach(orderItem => {
+        const item = linenItems.find(i => i.id === orderItem.itemId);
+        if (item) updateLinenItem(item.id, { currentStock: Math.max(0, item.currentStock - orderItem.quantity) });
+      });
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/orders`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ bedId: order.bedId, items: order.items, observations: order.observations, scheduledDelivery: order.scheduledDelivery }) });
+      if (res.ok) {
+        const created = await res.json();
+        setOrders(prev => [...prev, created]);
+        // refresh items stock from API
+        try {
+          const itemsRes = await fetch(`${baseUrl}/items`);
+          if (itemsRes.ok) setLinenItems(await itemsRes.json());
+        } catch {}
       }
-    });
-    return newOrder.id;
+    })();
   };
 
   const updateOrderStatus = (id: string, status: Order['status']) => {
-    setOrders(prev => prev.map(o => 
-      o.id === id ? { ...o, status, updatedAt: new Date().toISOString() } : o
-    ));
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status, updatedAt: new Date().toISOString() } : o));
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+      if (res.ok) setOrders(prev => prev.map(o => o.id === id ? await res.json() : o));
+    })();
   };
 
   const addStockMovement = (movement: Omit<StockMovement, 'id' | 'createdAt'>) => {
-    const newMovement: StockMovement = {
-      ...movement,
-      id: uuidv4(),
-      createdAt: new Date().toISOString()
-    };
-    setStockMovements(prev => [...prev, newMovement]);
+    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
+    if (!baseUrl) {
+      const newMovement: StockMovement = { ...movement, id: uuidv4(), createdAt: new Date().toISOString() };
+      setStockMovements(prev => [...prev, newMovement]);
+      return;
+    }
+    (async () => {
+      const res = await fetch(`${baseUrl}/stock-movements`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(movement) });
+      if (res.ok) {
+        const created = await res.json();
+        setStockMovements(prev => [...prev, created]);
+        // refresh items
+        try {
+          const itemsRes = await fetch(`${baseUrl}/items`);
+          if (itemsRes.ok) setLinenItems(await itemsRes.json());
+        } catch {}
+      }
+    })();
   };
 
   const getBedByToken = (token: string): Bed | undefined => {
