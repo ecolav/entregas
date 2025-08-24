@@ -110,9 +110,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
-      } catch {
-        // ignore
-      }
+      } catch (_err) { void 0; }
     })();
   }, []);
 
@@ -138,9 +136,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         if (itemsRes.ok) setLinenItems(await itemsRes.json());
         if (ordersRes.ok) setOrders(await ordersRes.json());
         if (stockRes.ok) setStockMovements(await stockRes.json());
-      } catch {
-        // ignore
-      }
+      } catch (_err) { void 0; }
     })();
   }, [user]);
 
@@ -325,7 +321,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
           const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch {}
+        } catch (_err) { void 0; }
       }
     })();
   };
@@ -363,7 +359,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         try {
           const itemsRes = await fetch(`${baseUrl}/items`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
           if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        } catch {}
+        } catch (_err) { void 0; }
       }
     })();
   };
