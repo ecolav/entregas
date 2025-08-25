@@ -50,7 +50,7 @@ const OrderPage: React.FC = () => {
 
   // Load items for public QR flow (no auth)
   useEffect(() => {
-    const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+    const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token');
     if (hasAuth) return; // context will handle
     if (!bed) return;
     if (Array.isArray(linenItems) && linenItems.length > 0) return;
@@ -79,7 +79,7 @@ const OrderPage: React.FC = () => {
 
   // Poll pending order in public flow so the banner appears after creation
   useEffect(() => {
-    const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+    const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token');
     if (hasAuth) return;
     const tokenParam = new URLSearchParams(location.search).get('token');
     if (!tokenParam) return;
@@ -148,7 +148,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
 
     // If user is authenticated inside app, use internal addOrder.
     // Otherwise, use public endpoint by token (for QR flow)
-    if ((window as any).localStorage?.getItem('token')) {
+    if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token')) {
       addOrder({
         bedId: bed.id,
         status: 'pending',
@@ -176,7 +176,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     if (toggleBedStatus) {
       const nextStatus = bed.status === 'occupied' ? 'free' : 'occupied';
       try {
-        const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+        const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token');
         if (hasAuth) {
           updateBed(bed.id, { status: nextStatus });
         } else {
@@ -195,7 +195,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     // Generate WhatsApp link (prefer client-configured number)
     // Try to use client from context (when authenticated), otherwise use public bed.sector.client from API
     const clientFromCtx = clients.find(c => c.id === bed?.sector?.clientId);
-    const number = clientFromCtx?.whatsappNumber || (bed as any)?.sector?.client?.whatsappNumber;
+    const number = clientFromCtx?.whatsappNumber || (bed && 'sector' in bed && (bed as { sector?: { client?: { whatsappNumber?: string } } }).sector?.client?.whatsappNumber);
     const message = generateWhatsAppMessage();
     const whatsappUrl = buildWhatsAppUrl({ phone: number, text: decodeURIComponent(message) });
     window.open(whatsappUrl, '_blank');
