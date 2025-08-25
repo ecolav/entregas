@@ -444,7 +444,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
         onClose={() => setConfirmOpen(false)}
         onConfirm={async ({ receiverName, confirmationType, file }) => {
           if (!pendingOrder) { setConfirmOpen(false); return; }
-          const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+          const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && !!window.localStorage.getItem('token');
           if (hasAuth) {
             await confirmOrderDelivery({ orderId: pendingOrder.id, receiverName, confirmationType, file });
           } else {
