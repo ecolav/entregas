@@ -1,3 +1,36 @@
+# Node / general
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+**/.env
+backend/ENV_EXAMPLE
+project/ENV_EXAMPLE
+
+# Build outputs
+dist/
+**/dist/
+project/dist/
+backend/dist/
+
+# Backend uploads and db
+backend/uploads/
+backend/prisma/dev.db
+
+# Vite local logs
+vite*.log
+**/vite*.log
+
+# Coverage
+coverage/
+
 # Logs
 logs
 *.log

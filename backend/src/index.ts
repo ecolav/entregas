@@ -464,6 +464,20 @@ app.put('/orders/:id/confirm-delivery', requireAuth(['admin','manager']), async 
   } catch (e) { next(e); }
 });
 
+// Serve SPA (frontend) if enabled and available
+if (process.env.SERVE_SPA === 'true') {
+  const publicDir = path.join(process.cwd(), 'public');
+  if (fs.existsSync(publicDir)) {
+    app.use(express.static(publicDir));
+    app.get('*', (req, res, next) => {
+      if (req.method !== 'GET') return next();
+      const indexPath = path.join(publicDir, 'index.html');
+      if (fs.existsSync(indexPath)) return res.sendFile(indexPath);
+      return next();
+    });
+  }
+}
+
 // Basic error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
