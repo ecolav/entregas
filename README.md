@@ -27,6 +27,20 @@ GitHub
 - Configure secret `VITE_API_URL` for the Pages build to point to your backend
 - Backend CI runs on pushes/PRs to `backend/**`
 
+HostGator (www.rouparia.textilecolav.com.br)
+1) DNS
+   - Crie um CNAME de `www` apontando para o host do seu plano HostGator (ou use o gerenciador de domínios da hospedagem)
+2) Deploy por GitHub Actions (FTP)
+   - Configure os secrets do repositório:
+     - `FTP_SERVER` (ex.: `ftp.seudominio.com`)
+     - `FTP_USERNAME`
+     - `FTP_PASSWORD`
+     - `FTP_SERVER_DIR` (ex.: `public_html/` ou `public_html/rouparia/`)
+     - `VITE_API_URL` (URL do backend)
+   - Rode o workflow `Deploy Frontend to HostGator via FTP` (em Actions) ou faça push na `main`
+3) Apache SPA fallback
+   - O arquivo `project/public/.htaccess` garante fallback para `index.html` em rotas do SPA
+
 Environment variables
 - Backend (`backend/.env`):
   - DATABASE_URL=mysql://user:pass@host:3306/dbname
