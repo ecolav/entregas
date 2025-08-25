@@ -127,6 +127,12 @@ const OrderManagement: React.FC = () => {
                     <div className="text-sm text-gray-600 mb-3">
                       <p><span className="font-medium">Itens:</span> {order.items.map(item => `${item.quantity}x ${item.item?.name}`).join(', ')}</p>
                       <p><span className="font-medium">Data:</span> {new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+                      {order.status === 'delivered' && order.receiverName && (
+                        <p><span className="font-medium">Recebido por:</span> {order.receiverName}</p>
+                      )}
+                      {order.status === 'delivered' && order.deliveredAt && (
+                        <p><span className="font-medium">Entregue em:</span> {new Date(order.deliveredAt).toLocaleString('pt-BR')}</p>
+                      )}
                       {order.status === 'delivered' && order.confirmationUrl && (
                         <p className="mt-1"><span className="font-medium">Comprovante:</span> <a href={order.confirmationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">ver arquivo</a></p>
                       )}
@@ -246,6 +252,12 @@ const OrderManagement: React.FC = () => {
                   )}
                   {selectedOrder.scheduledDelivery && (
                     <p><span className="font-medium">Entrega Agendada:</span> {new Date(selectedOrder.scheduledDelivery).toLocaleString('pt-BR')}</p>
+                  )}
+                  {selectedOrder.status === 'delivered' && selectedOrder.receiverName && (
+                    <p><span className="font-medium">Recebido por:</span> {selectedOrder.receiverName}</p>
+                  )}
+                  {selectedOrder.status === 'delivered' && selectedOrder.deliveredAt && (
+                    <p><span className="font-medium">Entregue em:</span> {new Date(selectedOrder.deliveredAt).toLocaleString('pt-BR')}</p>
                   )}
                 </div>
               </div>

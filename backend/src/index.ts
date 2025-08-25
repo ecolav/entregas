@@ -122,12 +122,58 @@ app.post('/public/orders', async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// Get latest pending order for a bed token (public)
+app.get('/public/orders', async (req, res, next) => {
+  try {
+    const token = String(req.query.token || '').trim();
+    if (token.length === 0) return res.status(400).json({ error: 'MissingToken' });
+    const bed = await prisma.bed.findFirst({ where: { token }, select: { id: true } });
+    if (!bed) return res.status(404).json({ error: 'NotFound' });
+    const order = await prisma.order.findFirst({
+      where: { bedId: bed.id, NOT: { status: { in: ['delivered','cancelled'] } } },
+      orderBy: { createdAt: 'desc' },
+      include: { items: { include: { item: true } }, bed: true }
+    });
+    if (!order) return res.status(404).json({ error: 'NotFound' });
+    res.json(order);
+  } catch (e) { next(e); }
+});
+
 app.put('/public/beds/:token/status', async (req, res, next) => {
   try {
     const parsed = z.object({ status: z.enum(['free','occupied']) }).parse(req.body);
     const existing = await prisma.bed.findFirst({ where: { token: req.params.token } });
     if (!existing) return res.status(404).json({ error: 'NotFound' });
     const updated = await prisma.bed.update({ where: { id: existing.id }, data: { status: parsed.status } });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// Confirm delivery (public) guarded by bed token
+app.put('/public/orders/:id/confirm-delivery', async (req, res, next) => {
+  try {
+    const parsed = z.object({
+      token: z.string().min(1),
+      receiverName: z.string().min(1),
+      confirmationType: z.enum(['signature','photo']),
+      confirmationUrl: z.string().url(),
+      deliveredByUserId: z.string().optional().nullable(),
+    }).parse(req.body);
+    const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { bed: true } });
+    if (!order) return res.status(404).json({ error: 'NotFound' });
+    const bed = await prisma.bed.findFirst({ where: { token: parsed.token } });
+    if (!bed || bed.id !== order.bedId) return res.status(403).json({ error: 'Forbidden' });
+    const updated = await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: 'delivered',
+        deliveredAt: new Date(),
+        deliveredByUserId: parsed.deliveredByUserId || null,
+        receiverName: parsed.receiverName,
+        confirmationType: parsed.confirmationType,
+        confirmationUrl: parsed.confirmationUrl,
+      }
+    });
     res.json(updated);
   } catch (e) { next(e); }
 });

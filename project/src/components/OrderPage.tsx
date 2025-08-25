@@ -22,6 +22,7 @@ const OrderPage: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [toggleBedStatus, setToggleBedStatus] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [publicPendingOrder, setPublicPendingOrder] = useState<null | import('../types').Order>(null);
   const [publicItems, setPublicItems] = useState<LinenItem[]>([]);
 
   // Get token from URL
@@ -68,10 +69,32 @@ const OrderPage: React.FC = () => {
 
   const pendingOrder = useMemo(() => {
     if (!bed) return undefined;
+    if (publicPendingOrder && publicPendingOrder.bedId === bed.id && publicPendingOrder.status !== 'delivered' && publicPendingOrder.status !== 'cancelled') {
+      return publicPendingOrder;
+    }
     const list = orders.filter(o => o.bedId === bed.id && o.status !== 'delivered' && o.status !== 'cancelled');
     if (list.length === 0) return undefined;
     return list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())[0];
-  }, [orders, bed]);
+  }, [orders, bed, publicPendingOrder]);
+
+  // Poll pending order in public flow so the banner appears after creation
+  useEffect(() => {
+    const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+    if (hasAuth) return;
+    const tokenParam = new URLSearchParams(location.search).get('token');
+    if (!tokenParam) return;
+    const id = setInterval(async () => {
+      try {
+        const base = getApiBaseUrl();
+        const r = await fetch(`${base}/public/orders?token=${encodeURIComponent(tokenParam)}`);
+        if (r.ok) {
+          const ord = await r.json();
+          setPublicPendingOrder(ord as import('../types').Order);
+        }
+      } catch { /* ignore */ }
+    }, 5000);
+    return () => clearInterval(id);
+  }, [location.search]);
 
   const updateCart = (itemId: string, change: number) => {
     setCart(prev => {
@@ -137,11 +160,15 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
       try {
         const tokenParam = new URLSearchParams(location.search).get('token');
         const baseUrl = getApiBaseUrl();
-        await fetch(`${baseUrl}/public/orders`, {
+        const createdRes = await fetch(`${baseUrl}/public/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ token: tokenParam, items: orderItems, observations, scheduledDelivery })
         });
+        if (createdRes.ok) {
+          const created = await createdRes.json();
+          setPublicPendingOrder(created as import('../types').Order);
+        }
       } catch { /* ignore */ }
     }
 
@@ -417,12 +444,34 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
         onClose={() => setConfirmOpen(false)}
         onConfirm={async ({ receiverName, confirmationType, file }) => {
           if (!pendingOrder) { setConfirmOpen(false); return; }
-          await confirmOrderDelivery({
-            orderId: pendingOrder.id,
-            receiverName,
-            confirmationType,
-            file,
-          });
+          const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+          if (hasAuth) {
+            await confirmOrderDelivery({ orderId: pendingOrder.id, receiverName, confirmationType, file });
+          } else {
+            // Public flow: upload and confirm via API directly
+            const base = getApiBaseUrl();
+            // 1) upload
+            const form = new FormData(); form.append('file', file);
+            const up = await fetch(`${base}/uploads`, { method: 'POST', body: form });
+            if (!up.ok) { setConfirmOpen(false); return; }
+            const { url } = await up.json();
+            // 2) confirm (public guarded by token)
+            const tokenParam = new URLSearchParams(location.search).get('token');
+            await fetch(`${base}/public/orders/${pendingOrder.id}/confirm-delivery`, {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: tokenParam, receiverName, confirmationType, confirmationUrl: url })
+            });
+          }
+          // Refresh public state ASAP
+          try {
+            const tokenParam = new URLSearchParams(location.search).get('token');
+            if (tokenParam) {
+              const base = getApiBaseUrl();
+              const r = await fetch(`${base}/public/orders?token=${encodeURIComponent(tokenParam)}`);
+              if (r.ok) setPublicPendingOrder(await r.json());
+            }
+          } catch { /* ignore */ }
           setConfirmOpen(false);
         }}
       />
