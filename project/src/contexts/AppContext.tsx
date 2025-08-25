@@ -141,6 +141,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     };
   }, []);
 
+  // Periodic refresh while authenticated (cross-device updates when QR flow is used)
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (!token) return;
+    const id = setInterval(() => {
+      void refreshAll();
+    }, 5000);
+    return () => clearInterval(id);
+  }, [user]);
+
   // Add sector reference to beds
   const bedsWithSectors = beds.map(bed => ({
     ...bed,
@@ -385,7 +395,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     // Upload file
     const form = new FormData();
     form.append('file', params.file);
-    const baseUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL || 'http://localhost:4000';
+    const baseUrl = getApiBaseUrl();
     const token = localStorage.getItem('token');
     try {
       const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', headers: { Authorization: token ? `Bearer ${token}` : '' }, body: form });

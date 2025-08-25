@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { Plus, Edit, Trash2, Bed, Download, Copy, Check, Printer } from 'lucide-react';
+import { getAppBaseUrl, resolveAppBaseUrl } from '../../config';
 
 const BedManagement: React.FC = () => {
   const { beds, sectors, addBed, updateBed, deleteBed } = useApp();
@@ -46,7 +47,7 @@ const BedManagement: React.FC = () => {
     bed: { id: string; number: string; token: string; sector?: { name?: string | undefined } },
     mode: 'A7' | 'A6' | 'THERMAL'
   ) => {
-    const url = `${window.location.origin}/pedido?token=${bed.token}`;
+    const url = `${getAppBaseUrl()}/pedido?token=${bed.token}`;
     const a6 = { w: 105, h: 148 };
     const a7 = { w: 74, h: 105 };
     const wmm = mode === 'A6' ? a6.w : mode === 'A7' ? a7.w : thermalWidthMm;
@@ -138,12 +139,13 @@ const BedManagement: React.FC = () => {
 
   const clearSelection = () => setSelectedBedIds([]);
 
-  const handlePrintBatch = () => {
+  const handlePrintBatch = async () => {
     const bedsToPrint = visibleBeds.filter(b => selectedBedIds.length === 0 || selectedBedIds.includes(b.id));
     if (bedsToPrint.length === 0) return;
 
+    const dynamicAppBase = await resolveAppBaseUrl();
     const buildLabel = (bed: { number: string; token: string; sector?: { name?: string } }) => {
-      const url = `${window.location.origin}/pedido?token=${bed.token}`;
+      const url = `${dynamicAppBase}/pedido?token=${bed.token}`;
       // Estimate QR pixels for thermal based on 203 dpi (~8 dots/mm)
       const dotsPerMm = 8;
       const qrPxThermal = Math.max(120, Math.round(Math.min(thermalWidthMm, thermalHeightMm) * dotsPerMm * 0.7));
@@ -229,10 +231,29 @@ const BedManagement: React.FC = () => {
   };
 
   const handleCopyToken = async (token: string) => {
-    const url = `${window.location.origin}/pedido?token=${token}`;
-    await navigator.clipboard.writeText(url);
-    setCopiedToken(token);
-    setTimeout(() => setCopiedToken(null), 2000);
+    const url = `${await resolveAppBaseUrl()}/pedido?token=${token}`;
+    try {
+      if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+        await navigator.clipboard.writeText(url);
+      } else {
+        const textarea = document.createElement('textarea');
+        textarea.value = url;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+          document.execCommand('copy');
+        } finally {
+          document.body.removeChild(textarea);
+        }
+      }
+      setCopiedToken(token);
+      setTimeout(() => setCopiedToken(null), 2000);
+    } catch {
+      // no-op; in ambientes sem clipboard, apenas não quebra a UI
+    }
   };
 
   const generateQRUrl = (token: string) => {

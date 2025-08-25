@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useApp } from '../contexts/AppContext';
+import { getApiBaseUrl } from '../config';
+import type { LinenItem } from '../types';
 import { useLocation } from '../hooks/useLocation';
 import { Bed, Plus, Minus, MessageCircle, Calendar, AlertCircle } from 'lucide-react';
 import EcolavLogo from './EcolavLogo';
@@ -20,6 +22,7 @@ const OrderPage: React.FC = () => {
   const [submitted, setSubmitted] = useState(false);
   const [toggleBedStatus, setToggleBedStatus] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [publicItems, setPublicItems] = useState<LinenItem[]>([]);
 
   // Get token from URL
   useEffect(() => {
@@ -27,10 +30,41 @@ const OrderPage: React.FC = () => {
     const token = urlParams.get('token');
     
     if (token) {
-      const foundBed = getBedByToken(token);
-      setBed(foundBed);
+      // Try local cache first
+      const local = getBedByToken(token);
+      if (local) { setBed(local); return; }
+      // Fallback to public API (no auth required)
+      (async () => {
+        try {
+          const baseUrl = getApiBaseUrl();
+          const res = await fetch(`${baseUrl}/public/beds/${token}`);
+          if (res.ok) {
+            const b = await res.json();
+            setBed(b);
+          }
+        } catch { /* ignore */ }
+      })();
     }
   }, [location.search, getBedByToken]);
+
+  // Load items for public QR flow (no auth)
+  useEffect(() => {
+    const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+    if (hasAuth) return; // context will handle
+    if (!bed) return;
+    if (Array.isArray(linenItems) && linenItems.length > 0) return;
+    (async () => {
+      try {
+        const base = getApiBaseUrl();
+        const query = bed?.sector?.clientId ? `?clientId=${encodeURIComponent(bed.sector.clientId)}` : '';
+        const res = await fetch(`${base}/public/items${query}`);
+        if (res.ok) {
+          const items = await res.json();
+          setPublicItems(items as LinenItem[]);
+        }
+      } catch { /* ignore */ }
+    })();
+  }, [bed, linenItems]);
 
   const pendingOrder = useMemo(() => {
     if (!bed) return undefined;
@@ -55,10 +89,12 @@ const OrderPage: React.FC = () => {
     return Object.values(cart).reduce((sum, qty) => sum + qty, 0);
   };
 
+  const itemsSource = (linenItems && linenItems.length > 0) ? linenItems : publicItems;
+
   const generateWhatsAppMessage = () => {
     const items = Object.entries(cart)
       .map(([itemId, quantity]) => {
-        const item = linenItems.find(i => i.id === itemId);
+        const item = itemsSource.find(i => i.id === itemId);
         return `- ${quantity} ${item?.name}`;
       })
       .join('\n');
@@ -87,24 +123,52 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
       quantity
     }));
 
-    addOrder({
-      bedId: bed.id,
-      status: 'pending',
-      items: orderItems,
-      observations: observations || undefined,
-      scheduledDelivery: scheduledDelivery || undefined
-    });
+    // If user is authenticated inside app, use internal addOrder.
+    // Otherwise, use public endpoint by token (for QR flow)
+    if ((window as any).localStorage?.getItem('token')) {
+      addOrder({
+        bedId: bed.id,
+        status: 'pending',
+        items: orderItems,
+        observations: observations || undefined,
+        scheduledDelivery: scheduledDelivery || undefined
+      });
+    } else {
+      try {
+        const tokenParam = new URLSearchParams(location.search).get('token');
+        const baseUrl = getApiBaseUrl();
+        await fetch(`${baseUrl}/public/orders`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ token: tokenParam, items: orderItems, observations, scheduledDelivery })
+        });
+      } catch { /* ignore */ }
+    }
 
     // Optionally toggle bed status (occupied <-> free)
     if (toggleBedStatus) {
       const nextStatus = bed.status === 'occupied' ? 'free' : 'occupied';
-      updateBed(bed.id, { status: nextStatus });
-      setBed(prev => (prev ? { ...prev, status: nextStatus } : prev));
+      try {
+        const hasAuth = Boolean((window as any).localStorage?.getItem('token'));
+        if (hasAuth) {
+          updateBed(bed.id, { status: nextStatus });
+        } else {
+          const tokenParam = new URLSearchParams(location.search).get('token');
+          const baseUrl = getApiBaseUrl();
+          await fetch(`${baseUrl}/public/beds/${tokenParam}/status`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status: nextStatus })
+          });
+        }
+        setBed(prev => (prev ? { ...prev, status: nextStatus } : prev));
+      } catch { /* ignore */ }
     }
 
     // Generate WhatsApp link (prefer client-configured number)
-    const client = clients.find(c => c.id === bed?.sector?.clientId);
-    const number = client?.whatsappNumber;
+    // Try to use client from context (when authenticated), otherwise use public bed.sector.client from API
+    const clientFromCtx = clients.find(c => c.id === bed?.sector?.clientId);
+    const number = clientFromCtx?.whatsappNumber || (bed as any)?.sector?.client?.whatsappNumber;
     const message = generateWhatsAppMessage();
     const whatsappUrl = buildWhatsAppUrl({ phone: number, text: decodeURIComponent(message) });
     window.open(whatsappUrl, '_blank');
@@ -222,7 +286,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
           </div>
 
           <div className="divide-y divide-gray-100">
-            {linenItems.map((item) => (
+            {itemsSource.map((item) => (
               <div key={item.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">

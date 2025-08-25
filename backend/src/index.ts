@@ -67,6 +67,84 @@ app.post('/uploads', upload.single('file'), (req, res) => {
   res.status(201).json({ url });
 });
 
+// Public app base URL (used by QR generation on clients)
+app.get('/public/app-base', async (req, res) => {
+  const explicit = process.env.APP_BASE_URL;
+  if (explicit && explicit.trim().length > 0) {
+    return res.json({ appBaseUrl: explicit.trim() });
+  }
+  const host = req.get('host') || '';
+  const hasSpa = fs.existsSync(path.join(process.cwd(), 'public', 'index.html'));
+  if (process.env.SERVE_SPA === 'true' && hasSpa) {
+    return res.json({ appBaseUrl: `${req.protocol}://${host}` });
+  }
+  const hostnameOnly = host.includes(':') ? host.split(':')[0] : host;
+  const guess = `${req.protocol}://${hostnameOnly}:5173`;
+  return res.json({ appBaseUrl: guess });
+});
+
+// Public endpoints for QR-based flow (no auth)
+app.get('/public/beds/:token', async (req, res, next) => {
+  try {
+    const bed = await prisma.bed.findUnique({ where: { token: req.params.token }, include: { sector: { include: { client: true } } } as any });
+    if (!bed) return res.status(404).json({ error: 'NotFound' });
+    res.json(bed);
+  } catch (e) { next(e); }
+});
+
+app.post('/public/orders', async (req, res, next) => {
+  try {
+    const parsed = z.object({
+      token: z.string().min(1),
+      items: z.array(z.object({ itemId: z.string().min(1), quantity: z.number().int().positive() })).min(1),
+      observations: z.string().optional().nullable(),
+      scheduledDelivery: z.string().optional().nullable(),
+    }).parse(req.body);
+
+    const bed = await prisma.bed.findFirst({ where: { token: parsed.token }, include: { sector: true } });
+    if (!bed) return res.status(400).json({ error: 'InvalidBedToken' });
+
+    const created = await prisma.$transaction(async (tx) => {
+      const createdOrder = await tx.order.create({ data: { bedId: bed.id, status: 'pending', observations: parsed.observations ?? null, scheduledDelivery: parseMaybeDate(parsed.scheduledDelivery) } });
+      for (const it of parsed.items) {
+        await tx.orderItem.create({ data: { orderId: createdOrder.id, itemId: it.itemId, quantity: it.quantity } });
+        const item = await tx.linenItem.findUnique({ where: { id: it.itemId } });
+        if (item) {
+          const newStock = Math.max(0, item.currentStock - it.quantity);
+          await tx.linenItem.update({ where: { id: item.id }, data: { currentStock: newStock } });
+          await tx.stockMovement.create({ data: { itemId: item.id, type: 'out', quantity: it.quantity, reason: `Pedido ${createdOrder.id}` } });
+        }
+      }
+      return createdOrder;
+    });
+    const full = await prisma.order.findUnique({ where: { id: created.id }, include: { items: true, bed: true } });
+    res.status(201).json(full);
+  } catch (e) { next(e); }
+});
+
+app.put('/public/beds/:token/status', async (req, res, next) => {
+  try {
+    const parsed = z.object({ status: z.enum(['free','occupied']) }).parse(req.body);
+    const existing = await prisma.bed.findFirst({ where: { token: req.params.token } });
+    if (!existing) return res.status(404).json({ error: 'NotFound' });
+    const updated = await prisma.bed.update({ where: { id: existing.id }, data: { status: parsed.status } });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// Public items listing for QR flow (no auth)
+app.get('/public/items', async (req, res, next) => {
+  try {
+    const clientId = (req.query.clientId ? String(req.query.clientId) : '').trim();
+    let where: any = { OR: [{ clientId: null }] };
+    if (clientId.length > 0) {
+      where = { OR: [{ clientId: null }, { clientId }] };
+    }
+    const data = await prisma.linenItem.findMany({ where } as any);
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
 // Auth (login)
 const loginSchema = z.object({ email: z.string().email(), password: z.string().min(1) });
 app.post('/auth/login', async (req, res, next) => {
@@ -356,7 +434,19 @@ app.delete('/items/:id', requireAuth(['admin']), async (req, res, next) => {
 
 // Orders
 const orderItemInput = z.object({ itemId: z.string().min(1), quantity: z.number().int().positive() });
-const orderSchema = z.object({ bedId: z.string().min(1), items: z.array(orderItemInput).min(1), observations: z.string().optional().nullable(), scheduledDelivery: z.string().datetime().optional().nullable() });
+const orderSchema = z.object({ bedId: z.string().min(1), items: z.array(orderItemInput).min(1), observations: z.string().optional().nullable(), scheduledDelivery: z.string().optional().nullable() });
+
+function parseMaybeDate(input?: string | null): Date | null {
+  if (!input) return null;
+  let value = String(input).trim();
+  if (value.length === 0) return null;
+  // Support HTML datetime-local without seconds: YYYY-MM-DDTHH:MM
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(value)) {
+    value = `${value}:00`;
+  }
+  const d = new Date(value);
+  return isNaN(d.getTime()) ? null : d;
+}
 
 app.get('/orders', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
@@ -381,7 +471,7 @@ app.post('/orders', requireAuth(['admin','manager']), async (req: any, res, next
     if (!bed) return res.status(400).json({ error: 'Invalid bedId' });
     if (req.user.role === 'manager' && bed.sector.clientId && req.user.clientId !== bed.sector.clientId) return res.status(403).json({ error: 'Forbidden' });
     const created = await prisma.$transaction(async (tx) => {
-      const created = await tx.order.create({ data: { bedId: parsed.bedId, status: 'pending', observations: parsed.observations ?? null, scheduledDelivery: parsed.scheduledDelivery ? new Date(parsed.scheduledDelivery) : null } });
+      const created = await tx.order.create({ data: { bedId: parsed.bedId, status: 'pending', observations: parsed.observations ?? null, scheduledDelivery: parseMaybeDate(parsed.scheduledDelivery) } });
       for (const it of parsed.items) {
         await tx.orderItem.create({ data: { orderId: created.id, itemId: it.itemId, quantity: it.quantity } });
         const item = await tx.linenItem.findUnique({ where: { id: it.itemId } });
