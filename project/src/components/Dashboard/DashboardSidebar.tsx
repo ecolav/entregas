@@ -84,7 +84,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </button>
           </div>
 
-          <nav className="flex-1 px-4 py-6 space-y-2">
+          <nav className="flex-1 px-3 sm:px-4 py-4 sm:py-6 space-y-2">
             {menuItems.map((item) => (
               <button
                 key={item.id}
@@ -93,7 +93,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                   onToggle();
                 }}
                 className={`
-                  w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg
+                  w-full flex items-center space-x-3 px-3 sm:px-4 py-3 text-left rounded-lg text-sm
                   transition-all duration-200
                   ${
                     activeSection === item.id

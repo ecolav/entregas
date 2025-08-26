@@ -44,11 +44,11 @@ const SectorManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestão de Setores</h2>
-          <p className="text-gray-600">Gerencie os setores do hospital</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestão de Setores</h2>
+          <p className="text-sm text-gray-600">Gerencie os setores do hospital</p>
         </div>
         <button
           onClick={() => {
@@ -56,24 +56,24 @@ const SectorManagement: React.FC = () => {
             if (user?.role === 'admin') setFormData(prev => ({ ...prev, clientId: '' }));
             setIsAddModalOpen(true);
           }}
-          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all"
+          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           <span>Novo Setor</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {visibleSectors.map((sector) => (
-          <div key={sector.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div className="flex items-start justify-between mb-4">
+          <div key={sector.id} className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="flex items-center space-x-3">
                 <div className="p-2 bg-blue-100 rounded-lg">
-                  <Building className="w-6 h-6 text-blue-600" />
+                  <Building className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600" />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">{sector.name}</h3>
-                  <p className="text-sm text-gray-600">{sector.description}</p>
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">{sector.name}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">{sector.description}</p>
                   {user?.role === 'admin' && (
                     <p className="text-xs text-gray-500 mt-1">Cliente: {clients.find(c => c.id === sector.clientId)?.name || '—'}</p>
                   )}
@@ -101,8 +101,8 @@ const SectorManagement: React.FC = () => {
       {/* Add/Edit Modal */}
       {(isAddModalOpen || editingSector) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl p-6 w-full max-w-md">
-            <h3 className="text-lg font-semibold mb-4">
+          <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md">
+            <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4">
               {editingSector ? 'Editar Setor' : 'Novo Setor'}
             </h3>
             <form onSubmit={handleSubmit} className="space-y-4">
@@ -114,7 +114,7 @@ const SectorManagement: React.FC = () => {
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   required
                 />
               </div>
@@ -125,7 +125,7 @@ const SectorManagement: React.FC = () => {
                 <textarea
                   value={formData.description}
                   onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                   rows={3}
                 />
               </div>
@@ -137,7 +137,7 @@ const SectorManagement: React.FC = () => {
                   <select
                     value={formData.clientId}
                     onChange={(e) => setFormData({ ...formData, clientId: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
                     required
                   >
                     <option value="">Selecione um cliente</option>
@@ -155,13 +155,13 @@ const SectorManagement: React.FC = () => {
                     setEditingSector(null);
                     setFormData({ name: '', description: '', clientId: '' });
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+                  className="flex-1 px-3 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white px-3 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all text-sm"
                 >
                   {editingSector ? 'Salvar' : 'Criar'}
                 </button>

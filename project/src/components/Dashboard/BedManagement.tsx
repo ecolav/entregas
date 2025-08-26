@@ -262,33 +262,33 @@ const BedManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 sm:space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900">Gestão de Leitos</h2>
-          <p className="text-gray-600">Gerencie os leitos e seus QR Codes</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Gestão de Leitos</h2>
+          <p className="text-sm text-gray-600">Gerencie os leitos e seus QR Codes</p>
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all"
+          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-3 py-2 sm:px-4 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all text-sm"
         >
-          <Plus className="w-5 h-5" />
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
           <span>Novo Leito</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
         {visibleBeds.map((bed) => (
-          <div key={bed.id} className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div className="flex items-start justify-between mb-4">
+          <div key={bed.id} className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-all">
+            <div className="flex items-start justify-between mb-3 sm:mb-4">
               <div className="flex items-center space-x-3">
                 <div className={`p-2 rounded-lg ${bed.status === 'occupied' ? 'bg-red-100' : 'bg-green-100'}`}>
-                  <Bed className={`w-6 h-6 ${bed.status === 'occupied' ? 'text-red-600' : 'text-green-600'}`} />
+                  <Bed className={`w-5 h-5 sm:w-6 sm:h-6 ${bed.status === 'occupied' ? 'text-red-600' : 'text-green-600'}`} />
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-900">Leito {bed.number}</h3>
-                  <p className="text-sm text-gray-600">{bed.sector?.name}</p>
-                  <span className={`inline-block px-2 py-1 text-xs rounded-full font-medium ${
+                  <h3 className="font-semibold text-gray-900 text-sm sm:text-base">Leito {bed.number}</h3>
+                  <p className="text-xs sm:text-sm text-gray-600">{bed.sector?.name}</p>
+                  <span className={`inline-block mt-1 px-2 py-0.5 text-[11px] sm:text-xs rounded-full font-medium ${
                     bed.status === 'occupied' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'
                   }`}>
                     {bed.status === 'occupied' ? 'Ocupado' : 'Livre'}
@@ -323,14 +323,14 @@ const BedManagement: React.FC = () => {
                 <img
                   src={generateQRUrl(bed.token)}
                   alt={`QR Code para leito ${bed.number}`}
-                  className="w-24 h-24 border border-gray-200 rounded"
+                  className="w-20 h-20 sm:w-24 sm:h-24 border border-gray-200 rounded"
                 />
               </div>
               
               <div className="flex space-x-2">
                 <button
                   onClick={() => handleCopyToken(bed.token)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all text-sm"
+                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all text-xs sm:text-sm"
                 >
                   {copiedToken === bed.token ? (
                     <>
@@ -347,13 +347,13 @@ const BedManagement: React.FC = () => {
                 <a
                   href={generateQRUrl(bed.token)}
                   download={`qr-leito-${bed.number}.png`}
-                  className="flex items-center justify-center px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-all"
+                  className="flex items-center justify-center px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-all text-xs sm:text-sm"
                 >
                   <Download className="w-4 h-4" />
                 </a>
                 <button
                   onClick={() => handlePrintLabel({ id: bed.id, number: bed.number, token: bed.token, sector: { name: bed.sector?.name } }, batchMode)}
-                  className="flex items-center justify-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all"
+                  className="flex items-center justify-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all text-xs sm:text-sm"
                   title="Imprimir etiqueta"
                 >
                   <Printer className="w-4 h-4" />
@@ -386,71 +386,79 @@ const BedManagement: React.FC = () => {
       </div>
 
       {/* Batch print controls */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div className="flex items-center gap-2">
+      <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100">
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={selectAllVisible}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Selecionar Todos
             </button>
             <button
               onClick={clearSelection}
-              className="px-3 py-2 text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
+              className="px-3 py-2 text-xs sm:text-sm border border-gray-300 rounded-lg hover:bg-gray-50"
             >
               Limpar Seleção
             </button>
-            <span className="text-sm text-gray-600">Selecionados: {selectedBedIds.length}</span>
+            <span className="text-xs sm:text-sm text-gray-600">Selecionados: {selectedBedIds.length}</span>
           </div>
-          <div className="flex items-center gap-2">
-            <select
-              value={batchMode}
-              onChange={(e) => setBatchMode(e.target.value as 'A7' | 'A6' | 'THERMAL')}
-              className="px-2 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              title="Formato"
-            >
-              <option value="THERMAL">Térmica (mm)</option>
-              <option value="A7">A7</option>
-              <option value="A6">A6</option>
-            </select>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-600">Formato</label>
+              <select
+                value={batchMode}
+                onChange={(e) => setBatchMode(e.target.value as 'A7' | 'A6' | 'THERMAL')}
+                className="px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                title="Formato"
+              >
+                <option value="THERMAL">Térmica (mm)</option>
+                <option value="A7">A7</option>
+                <option value="A6">A6</option>
+              </select>
+            </div>
             {batchMode === 'THERMAL' && (
-              <div className="flex items-center gap-2 text-sm">
-                <label className="text-gray-600">Largura (mm)</label>
+              <div className="grid grid-cols-3 gap-2 sm:flex sm:items-center sm:gap-2 text-xs sm:text-sm">
+                <label className="text-gray-600 col-span-3 sm:col-span-1 hidden sm:block">Largura (mm)</label>
                 <input
+                  aria-label="Largura (mm)"
                   type="number"
                   min={20}
                   max={110}
                   value={thermalWidthMm}
                   onChange={(e) => setThermalWidthMm(parseInt(e.target.value) || 50)}
-                  className="w-20 px-2 py-1 border border-gray-300 rounded"
+                  className="w-full sm:w-20 px-2 py-1 border border-gray-300 rounded"
                 />
-                <label className="text-gray-600">Altura (mm)</label>
+                <label className="text-gray-600 col-span-3 sm:col-span-1 hidden sm:block">Altura (mm)</label>
                 <input
+                  aria-label="Altura (mm)"
                   type="number"
                   min={20}
                   max={200}
                   value={thermalHeightMm}
                   onChange={(e) => setThermalHeightMm(parseInt(e.target.value) || 30)}
-                  className="w-20 px-2 py-1 border border-gray-300 rounded"
+                  className="w-full sm:w-20 px-2 py-1 border border-gray-300 rounded"
                 />
-                <label className="text-gray-600">Margem (mm)</label>
+                <label className="text-gray-600 col-span-3 sm:col-span-1 hidden sm:block">Margem (mm)</label>
                 <input
+                  aria-label="Margem (mm)"
                   type="number"
                   min={0}
                   max={10}
                   value={thermalMarginMm}
                   onChange={(e) => setThermalMarginMm(parseInt(e.target.value) || 3)}
-                  className="w-16 px-2 py-1 border border-gray-300 rounded"
+                  className="w-full sm:w-16 px-2 py-1 border border-gray-300 rounded"
                 />
               </div>
             )}
-            <button
-              onClick={handlePrintBatch}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm"
-            >
-              Imprimir Selecionados
-            </button>
+            <div>
+              <button
+                onClick={handlePrintBatch}
+                className="w-full sm:w-auto px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-xs sm:text-sm"
+              >
+                Imprimir Selecionados
+              </button>
+            </div>
           </div>
         </div>
       </div>

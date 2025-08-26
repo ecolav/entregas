@@ -21,17 +21,17 @@ const Login: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-md">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-green-50 flex items-center justify-center p-3 sm:p-4">
+      <div className="bg-white rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-full mb-4">
-            <EcolavLogo size={56} />
+          <div className="inline-flex items-center justify-center w-14 h-14 sm:w-16 sm:h-16 rounded-full mb-4">
+            <EcolavLogo size={48} />
           </div>
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">ECOLAV</h1>
-          <p className="text-gray-600">Sistema de Gestão de Enxoval</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">ECOLAV</h1>
+          <p className="text-sm text-gray-600">Sistema de Gestão de Enxoval</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Email
@@ -40,7 +40,7 @@ const Login: React.FC = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              className="w-full px-3 sm:px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
               placeholder="admin@hospital.com"
               required
             />
@@ -55,7 +55,7 @@ const Login: React.FC = () => {
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                className="w-full px-3 sm:px-4 py-3 pr-10 sm:pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all text-sm"
                 placeholder="••••••"
                 required
               />
@@ -78,7 +78,7 @@ const Login: React.FC = () => {
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center"
+            className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center text-sm"
           >
             {isLoading ? (
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
@@ -91,7 +91,7 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
+        <div className="mt-6 sm:mt-8 p-3 sm:p-4 bg-gray-50 rounded-lg">
           <p className="text-sm text-gray-600 font-medium mb-2">Credenciais de teste:</p>
           <div className="space-y-1 text-xs text-gray-500">
             <p><span className="font-medium">Admin (seed):</span> admin@site.com / 123456</p>
