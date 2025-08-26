@@ -56,15 +56,15 @@ const OrderManagement: React.FC = () => {
   };
 
   return (
-    <div className="space-y-5 sm:space-y-6">
+    <div className="space-y-6">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Gestão de Pedidos</h2>
-        <p className="text-sm text-gray-600">Gerencie todos os pedidos de enxoval</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Gestão de Pedidos</h2>
+        <p className="text-gray-600">Gerencie todos os pedidos de enxoval</p>
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
+      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -72,7 +72,7 @@ const OrderManagement: React.FC = () => {
               placeholder="Buscar por leito ou setor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-3 sm:pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -80,7 +80,7 @@ const OrderManagement: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Todos os Status</option>
               <option value="pending">Pendente</option>
@@ -104,16 +104,16 @@ const OrderManagement: React.FC = () => {
           <>
           <div className="divide-y divide-gray-100">
             {filteredOrders.map((order) => (
-              <div key={order.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors transform animate-fade-in">
+              <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors transform animate-fade-in">
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
+                      <h3 className="font-semibold text-gray-900">
                         {order.bed?.sector?.name} - Leito {order.bed?.number}
                       </h3>
                       <div className="flex items-center space-x-2">
                         {getStatusIcon(order.status)}
-                        <span className={`px-2 py-1 text-[11px] sm:text-xs font-medium rounded-full ${
+                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                           order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
                           order.status === 'preparing' ? 'bg-blue-100 text-blue-800' :
                           order.status === 'delivered' ? 'bg-green-100 text-green-800' :
@@ -156,7 +156,7 @@ const OrderManagement: React.FC = () => {
                     {order.status !== 'delivered' && (
                       <button
                         onClick={() => { setSelectedOrder(order); setConfirmOpen(true); }}
-                        className="px-3 py-1 text-xs sm:text-sm bg-green-600 hover:bg-green-700 text-white rounded"
+                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded"
                       >
                         Confirmar Entrega
                       </button>
@@ -165,7 +165,7 @@ const OrderManagement: React.FC = () => {
                     <select
                       value={order.status}
                       onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className="px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="pending">Pendente</option>
                       <option value="preparing">Em Separação</option>

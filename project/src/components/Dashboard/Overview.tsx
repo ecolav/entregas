@@ -53,25 +53,25 @@ const Overview: React.FC = () => {
   const recentOrders = orders.slice(0, 5);
 
   return (
-    <div className="space-y-6 sm:space-y-8">
+    <div className="space-y-8">
       <div>
-        <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">Visão Geral</h2>
-        <p className="text-sm text-gray-600">Dashboard do sistema de gestão de enxoval</p>
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">Visão Geral</h2>
+        <p className="text-gray-600">Dashboard do sistema de gestão de enxoval</p>
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         {stats.map((stat, index) => (
           <div
             key={index}
-            className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
           >
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-xs sm:text-sm text-gray-600 mb-1">{stat.title}</p>
-                <p className="text-xl sm:text-2xl font-bold text-gray-900">{stat.value}</p>
+                <p className="text-sm text-gray-600 mb-1">{stat.title}</p>
+                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
               </div>
-              <div className={`p-2 sm:p-3 bg-gradient-to-r ${stat.color} rounded-lg text-white`}>
+              <div className={`p-3 bg-gradient-to-r ${stat.color} rounded-lg text-white`}>
                 {stat.icon}
               </div>
             </div>
@@ -79,12 +79,12 @@ const Overview: React.FC = () => {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         {/* Alerts */}
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center space-x-2 mb-4">
             <AlertTriangle className="w-5 h-5 text-red-500" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Alertas</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Alertas</h3>
           </div>
           
           <div className="space-y-3">
@@ -122,10 +122,10 @@ const Overview: React.FC = () => {
         </div>
 
         {/* Recent Orders */}
-        <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
+        <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
           <div className="flex items-center space-x-2 mb-4">
             <Calendar className="w-5 h-5 text-blue-500" />
-            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Pedidos Recentes</h3>
+            <h3 className="text-lg font-semibold text-gray-900">Pedidos Recentes</h3>
           </div>
           
           <div className="space-y-3">
@@ -166,23 +166,23 @@ const Overview: React.FC = () => {
       </div>
 
       {/* Quick Actions */}
-      <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Ações Rápidas</h3>
-
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
+      <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Ações Rápidas</h3>
+        
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
             <Package className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Adicionar Item de Enxoval</p>
+            <p className="text-sm font-medium text-gray-700">Adicionar Item de Enxoval</p>
           </div>
-
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
+          
+          <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
             <Bed className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Cadastrar Novo Leito</p>
+            <p className="text-sm font-medium text-gray-700">Cadastrar Novo Leito</p>
           </div>
-
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
+          
+          <div className="p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
             <TrendingUp className="w-8 h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Ver Relatórios</p>
+            <p className="text-sm font-medium text-gray-700">Ver Relatórios</p>
           </div>
         </div>
       </div>

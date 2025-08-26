@@ -13,7 +13,7 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) 
   const { logout } = useAuth();
 
   return (
-    <header className="bg-white border-b border-gray-200 px-3 sm:px-4 py-3">
+    <header className="bg-white border-b border-gray-200 px-4 py-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <button
@@ -28,13 +28,13 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) 
               <img src="/ecolav.png" alt="ECOLAV" className="h-8 w-8 object-contain" />
             </div>
             <div className="hidden sm:block">
-              <h1 className="text-lg font-bold text-gray-900">ECOLAV</h1>
-              <p className="text-xs text-gray-500">Dashboard</p>
+              <h1 className="text-xl font-bold text-gray-900">ECOLAV</h1>
+              <p className="text-sm text-gray-500">Dashboard</p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center space-x-3 sm:space-x-4">
+        <div className="flex items-center space-x-4">
           {user && (
             <div className="flex items-center space-x-3">
               <div className="hidden sm:block text-right">

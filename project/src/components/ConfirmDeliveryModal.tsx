@@ -79,10 +79,10 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
 
   if (!open) return null;
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-50 p-3 sm:p-4 transition-opacity animate-fade-in">
-      <div className="bg-white rounded-xl p-4 sm:p-6 w-full max-w-md sm:max-w-lg max-h-[90vh] overflow-y-auto shadow-xl transform animate-scale-in">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-[1px] flex items-center justify-center z-50 p-4 transition-opacity animate-fade-in">
+      <div className="bg-white rounded-xl p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-xl transform animate-scale-in">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="text-base sm:text-lg font-semibold">Confirmar Entrega</h3>
+          <h3 className="text-lg font-semibold">Confirmar Entrega</h3>
           <button onClick={onClose} className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg">×</button>
         </div>
 
@@ -93,16 +93,16 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
               type="text"
               value={receiverName}
               onChange={(e) => setReceiverName(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               placeholder="Nome de quem recebeu"
             />
           </div>
 
           <div className="flex items-center space-x-2">
-            <button onClick={() => setMode('signature')} className={`px-3 py-2 text-sm rounded border ${mode==='signature'?'bg-blue-600 text-white border-blue-600':'border-gray-300'}`}>
+            <button onClick={() => setMode('signature')} className={`px-3 py-2 rounded border ${mode==='signature'?'bg-blue-600 text-white border-blue-600':'border-gray-300'}`}>
               <PenTool className="inline w-4 h-4 mr-1" /> Assinatura
             </button>
-            <button onClick={() => setMode('photo')} className={`px-3 py-2 text-sm rounded border ${mode==='photo'?'bg-blue-600 text-white border-blue-600':'border-gray-300'}`}>
+            <button onClick={() => setMode('photo')} className={`px-3 py-2 rounded border ${mode==='photo'?'bg-blue-600 text-white border-blue-600':'border-gray-300'}`}>
               <Camera className="inline w-4 h-4 mr-1" /> Foto
             </button>
           </div>
@@ -112,9 +112,9 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
               <div className="mb-2 text-sm text-gray-600">Desenhe a assinatura abaixo</div>
               <canvas
                 ref={canvasRef}
-                width={600}
-                height={240}
-                className="border border-gray-300 rounded w-full h-40 sm:h-48"
+                width={500}
+                height={200}
+                className="border border-gray-300 rounded w-full"
                 onMouseDown={handleStart}
                 onMouseMove={draw}
                 onMouseUp={handleEnd}
@@ -132,8 +132,8 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
           )}
 
           <div className="flex items-center justify-end space-x-2 pt-2">
-            <button onClick={onClose} className="px-3 sm:px-4 py-2 border border-gray-300 rounded hover:bg-gray-50 text-sm">Cancelar</button>
-            <button disabled={isSubmitting || !receiverName || (mode==='photo' && !photoFile)} onClick={handleConfirm} className="px-3 sm:px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm">
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 rounded hover:bg-gray-50">Cancelar</button>
+            <button disabled={isSubmitting || !receiverName || (mode==='photo' && !photoFile)} onClick={handleConfirm} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded">
               {isSubmitting ? 'Enviando...' : 'Confirmar Entrega'}
             </button>
           </div>
