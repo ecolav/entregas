@@ -5,8 +5,8 @@ export function getApiBaseUrl(): string {
   const envUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } })?.env?.VITE_API_URL;
   if (envUrl && envUrl.length > 0) return envUrl;
 
-  if (typeof window !== 'undefined' && (window as any).location?.origin) {
-    return (window as any).location.origin;
+  if (typeof window !== 'undefined' && window.location?.origin) {
+    return window.location.origin;
   }
 
   return 'http://localhost:4000';
@@ -17,10 +17,7 @@ export function getApiBaseUrl(): string {
 export function getAppBaseUrl(): string {
   const envUrl = (import.meta as unknown as { env?: { VITE_PUBLIC_APP_URL?: string } })?.env?.VITE_PUBLIC_APP_URL;
   if (envUrl && envUrl.length > 0) return envUrl;
-  if (typeof window !== 'undefined') {
-    const origin = (window as any).location?.origin as string | undefined;
-    if (origin) return origin;
-  }
+  if (typeof window !== 'undefined' && window.location?.origin) return window.location.origin;
   return 'http://localhost:5173';
 }
 
