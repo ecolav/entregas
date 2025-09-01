@@ -150,7 +150,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     // Otherwise, use public endpoint by token (for QR flow)
     if (typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token')) {
       addOrder({
-        bedId: bed.id,
+        bedId: bed!.id,
         status: 'pending',
         items: orderItems,
         observations: observations || undefined,
@@ -174,11 +174,11 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
 
     // Optionally toggle bed status (occupied <-> free)
     if (toggleBedStatus) {
-      const nextStatus = bed.status === 'occupied' ? 'free' : 'occupied';
+      const nextStatus = bed!.status === 'occupied' ? 'free' : 'occupied';
       try {
         const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && window.localStorage.getItem('token');
         if (hasAuth) {
-          updateBed(bed.id, { status: nextStatus });
+          updateBed(bed!.id, { status: nextStatus });
         } else {
           const tokenParam = new URLSearchParams(location.search).get('token');
           const baseUrl = getApiBaseUrl();
@@ -196,8 +196,21 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     // Try to use client from context (when authenticated), otherwise use public bed.sector.client from API
     const clientFromCtx = clients.find(c => c.id === bed?.sector?.clientId);
     const number = clientFromCtx?.whatsappNumber || (bed && 'sector' in bed && (bed as { sector?: { client?: { whatsappNumber?: string } } }).sector?.client?.whatsappNumber);
+    
+    // Debug logs
+    console.log('🔍 WhatsApp Debug:', {
+      bedId: bed?.id,
+      sectorId: bed?.sector?.id,
+      clientId: bed?.sector?.clientId,
+      clientFromCtx: clientFromCtx?.name,
+      clientFromCtxWhatsApp: clientFromCtx?.whatsappNumber,
+      bedSectorClient: (bed as any)?.sector?.client?.name,
+      bedSectorClientWhatsApp: (bed as any)?.sector?.client?.whatsappNumber,
+      finalNumber: number || undefined
+    });
+    
     const message = generateWhatsAppMessage();
-    const whatsappUrl = buildWhatsAppUrl({ phone: number, text: decodeURIComponent(message) });
+    const whatsappUrl = buildWhatsAppUrl({ phone: number || undefined, text: decodeURIComponent(message) });
     window.open(whatsappUrl, '_blank');
     addToast({ type: 'success', message: 'Pedido enviado para o WhatsApp.' });
 
