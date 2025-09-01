@@ -15,12 +15,16 @@ export const useLocation = (): Location => {
 
   useEffect(() => {
     const handleLocationChange = () => {
-      setLocation({
+      const newLocation = {
         pathname: window.location.pathname,
         search: window.location.search,
         hash: window.location.hash,
-      });
+      };
+
+      setLocation(newLocation);
     };
+
+
 
     window.addEventListener('popstate', handleLocationChange);
     

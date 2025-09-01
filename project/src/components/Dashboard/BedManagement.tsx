@@ -10,7 +10,7 @@ const BedManagement: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [editingBed, setEditingBed] = useState<string | null>(null);
   const [copiedToken, setCopiedToken] = useState<string | null>(null);
-  const [formData, setFormData] = useState({ number: '', sectorId: '', status: 'free' as const });
+  const [formData, setFormData] = useState({ number: '', sectorId: '', status: 'free' as 'free' | 'occupied' });
   const [batchMode, setBatchMode] = useState<'A7' | 'A6' | 'THERMAL'>('THERMAL');
   const [thermalWidthMm, setThermalWidthMm] = useState<number>(50);
   const [thermalHeightMm, setThermalHeightMm] = useState<number>(30);
@@ -36,7 +36,7 @@ const BedManagement: React.FC = () => {
       addBed(formData);
       setIsAddModalOpen(false);
     }
-    setFormData({ number: '', sectorId: '', status: 'free' });
+    setFormData({ number: '', sectorId: '', status: 'free' as 'free' | 'occupied' });
   };
 
   const handleSetStatus = (id: string, status: 'occupied' | 'free') => {
@@ -231,7 +231,11 @@ const BedManagement: React.FC = () => {
   };
 
   const handleCopyToken = async (token: string) => {
-    const url = `${await resolveAppBaseUrl()}/pedido?token=${token}`;
+    const baseUrl = getAppBaseUrl();
+    const url = `${baseUrl}/pedido?token=${token}`;
+    
+
+    
     try {
       if (typeof navigator !== 'undefined' && navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
         await navigator.clipboard.writeText(url);
@@ -257,7 +261,9 @@ const BedManagement: React.FC = () => {
   };
 
   const generateQRUrl = (token: string) => {
-    const url = `${window.location.origin}/pedido?token=${token}`;
+    const baseUrl = getAppBaseUrl();
+    const url = `${baseUrl}/pedido?token=${token}`;
+
     return `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(url)}`;
   };
 
@@ -512,7 +518,7 @@ const BedManagement: React.FC = () => {
                   onClick={() => {
                     setIsAddModalOpen(false);
                     setEditingBed(null);
-                    setFormData({ number: '', sectorId: '', status: 'free' });
+                    setFormData({ number: '', sectorId: '', status: 'free' as 'free' | 'occupied' });
                   }}
                   className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
                 >

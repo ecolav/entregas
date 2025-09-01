@@ -195,21 +195,28 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     // Generate WhatsApp link (prefer client-configured number)
     // Try to use client from context (when authenticated), otherwise use public bed.sector.client from API
     const clientFromCtx = clients.find(c => c.id === bed?.sector?.clientId);
-    const number = clientFromCtx?.whatsappNumber || (bed && 'sector' in bed && (bed as { sector?: { client?: { whatsappNumber?: string } } }).sector?.client?.whatsappNumber);
+    const bedSectorClient = (bed as any)?.sector?.client;
     
-    // Debug logs
-    console.log('🔍 WhatsApp Debug:', {
-      bedId: bed?.id,
-      sectorId: bed?.sector?.id,
-      clientId: bed?.sector?.clientId,
-      clientFromCtx: clientFromCtx?.name,
-      clientFromCtxWhatsApp: clientFromCtx?.whatsappNumber,
-      bedSectorClient: (bed as any)?.sector?.client?.name,
-      bedSectorClientWhatsApp: (bed as any)?.sector?.client?.whatsappNumber,
-      finalNumber: number || undefined
-    });
+    // Determine which number to use
+    let number: string | undefined;
+    let numberSource: string = 'none';
+    
+    if (clientFromCtx?.whatsappNumber) {
+      number = clientFromCtx.whatsappNumber;
+      numberSource = 'context';
+    } else if (bedSectorClient?.whatsappNumber) {
+      number = bedSectorClient.whatsappNumber;
+      numberSource = 'bed_sector_client';
+    }
+    
+    // Don't use any fallback number - if no number is configured, WhatsApp will open without a specific number
+    
+
     
     const message = generateWhatsAppMessage();
+    
+
+    
     const whatsappUrl = buildWhatsAppUrl({ phone: number || undefined, text: decodeURIComponent(message) });
     window.open(whatsappUrl, '_blank');
     addToast({ type: 'success', message: 'Pedido enviado para o WhatsApp.' });

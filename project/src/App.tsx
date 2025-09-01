@@ -14,6 +14,15 @@ const AppContent: React.FC = () => {
 
   // Check if this is an order page (QR code scan)
   const isOrderPage = location.pathname === '/pedido' || location.search.includes('token=');
+  
+  // Manual test - add this temporarily
+  if (location.pathname === '/test') {
+    console.log('🔍 Manual Test - Direct navigation to /pedido?token=test');
+    window.location.href = '/pedido?token=test';
+    return null;
+  }
+  
+
 
   if (isLoading) {
     return (
