@@ -28,7 +28,6 @@ const OrderPage: React.FC = () => {
   // Estados de carregamento
   const [isLoadingBed, setIsLoadingBed] = useState(false);
   const [isLoadingItems, setIsLoadingItems] = useState(false);
-  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
   const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
 
   // Get token from URL

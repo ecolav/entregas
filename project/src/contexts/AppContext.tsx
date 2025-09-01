@@ -382,14 +382,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     (async () => {
       const token = localStorage.getItem('token');
       const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify({ status }) });
-      if (res.ok) {
-        const updated = await res.json();
-        setOrders(prev => prev.map(o => o.id === id ? updated : o));
-        // Atualização imediata para tempo real
-        await refreshAll();
-        notify('orders-changed');
-        addToast({ type: 'success', message: 'Status do pedido atualizado com sucesso' });
-      }
+             if (res.ok) {
+         await res.json();
+         // Atualização imediata para tempo real
+         await refreshAll();
+         notify('orders-changed');
+         addToast({ type: 'success', message: 'Status do pedido atualizado com sucesso' });
+       }
     })();
   };
 
@@ -469,9 +468,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       notify('orders-changed');
       
       addToast({ type: 'success', message: 'Entrega confirmada com sucesso' });
-    } catch (error) {
-      addToast({ type: 'error', message: 'Erro de rede na confirmação' });
-    }
+         } catch {
+       addToast({ type: 'error', message: 'Erro de rede na confirmação' });
+     }
   };
 
   // Clients CRUD (API-aware)

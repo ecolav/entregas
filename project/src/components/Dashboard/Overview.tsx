@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const Overview: React.FC = () => {
-  const { sectors, beds, linenItems, orders, isLoading } = useApp();
+  const { sectors, beds, linenItems, orders } = useApp();
 
   const occupiedBeds = beds.filter(bed => bed.status === 'occupied').length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;

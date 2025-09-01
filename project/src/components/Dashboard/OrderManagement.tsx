@@ -4,7 +4,7 @@ import { Search, Filter, Eye, Clock, CheckCircle, XCircle, Package } from 'lucid
 import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
 
 const OrderManagement: React.FC = () => {
-  const { orders, updateOrderStatus, confirmOrderDelivery, isLoading } = useApp();
+  const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
