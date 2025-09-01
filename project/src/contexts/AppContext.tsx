@@ -35,7 +35,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
+
   const [lastRefresh, setLastRefresh] = useState<number>(0);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => getApiBaseUrl();
@@ -64,7 +64,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       }
     }
 
-    setIsLoading(true);
+
     try {
       const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
         fetch(`${baseUrl}/clients`, { headers: authHeaders }),
@@ -112,7 +112,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       console.error('Erro ao carregar dados:', error);
       addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
     } finally {
-      setIsLoading(false);
+      // Loading completed
     }
   }, [user?.id, addToast]);
 
