@@ -461,35 +461,77 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
         onClose={() => setConfirmOpen(false)}
         onConfirm={async ({ receiverName, confirmationType, file }) => {
           if (!pendingOrder) { setConfirmOpen(false); return; }
+          
+          console.log('🔍 Confirmando entrega:', { orderId: pendingOrder.id, receiverName, confirmationType });
+          
           const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && !!window.localStorage.getItem('token');
           if (hasAuth) {
+            console.log('🔍 Usando fluxo autenticado');
             await confirmOrderDelivery({ orderId: pendingOrder.id, receiverName, confirmationType, file });
           } else {
+            console.log('🔍 Usando fluxo público');
             // Public flow: upload and confirm via API directly
             const base = getApiBaseUrl();
+            
             // 1) upload
-            const form = new FormData(); form.append('file', file);
-            const up = await fetch(`${base}/uploads`, { method: 'POST', body: form });
-            if (!up.ok) { setConfirmOpen(false); return; }
+            const form = new FormData(); 
+            form.append('file', file);
+            console.log('🔍 Fazendo upload do arquivo...');
+            const up = await fetch(`${base}/public/uploads`, { method: 'POST', body: form });
+            if (!up.ok) { 
+              console.error('🔍 Erro no upload:', up.status);
+              setConfirmOpen(false); 
+              return; 
+            }
             const { url } = await up.json();
+            console.log('🔍 Upload realizado:', url);
+            
             // 2) confirm (public guarded by token)
             const tokenParam = new URLSearchParams(location.search).get('token');
-            await fetch(`${base}/public/orders/${pendingOrder.id}/confirm-delivery`, {
+            console.log('🔍 Confirmando entrega com token:', tokenParam);
+            
+            const confirmRes = await fetch(`${base}/public/orders/${pendingOrder.id}/confirm-delivery`, {
               method: 'PUT',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token: tokenParam, receiverName, confirmationType, confirmationUrl: url })
             });
-          }
-          // Refresh public state ASAP
-          try {
-            const tokenParam = new URLSearchParams(location.search).get('token');
-            if (tokenParam) {
-              const base = getApiBaseUrl();
-              const r = await fetch(`${base}/public/orders?token=${encodeURIComponent(tokenParam)}`);
-              if (r.ok) setPublicPendingOrder(await r.json());
+            
+            if (!confirmRes.ok) {
+              console.error('🔍 Erro ao confirmar entrega:', confirmRes.status);
+              const errorText = await confirmRes.text();
+              console.error('🔍 Detalhes do erro:', errorText);
+              return;
             }
-          } catch { /* ignore */ }
-          setConfirmOpen(false);
+            
+                         console.log('🔍 Entrega confirmada com sucesso!');
+             
+             // Feedback visual para o usuário
+             alert('✅ Entrega confirmada com sucesso!');
+           }
+           
+           // Atualizar o estado imediatamente após confirmação
+           setPublicPendingOrder(null); // Remove o pedido pendente da tela
+           
+           // Refresh public state para garantir sincronização
+           try {
+             const tokenParam = new URLSearchParams(location.search).get('token');
+             if (tokenParam) {
+               const base = getApiBaseUrl();
+               const r = await fetch(`${base}/public/orders?token=${encodeURIComponent(tokenParam)}`);
+               if (r.ok) {
+                 const updatedOrder = await r.json();
+                 setPublicPendingOrder(updatedOrder);
+               } else {
+                 // Se não há mais pedido pendente, limpar o estado
+                 setPublicPendingOrder(null);
+               }
+             }
+           } catch { 
+             // Em caso de erro, limpar o estado para mostrar "sem entrega pendente"
+             setPublicPendingOrder(null);
+           }
+           
+           setConfirmOpen(false);
         }}
       />
     </div>

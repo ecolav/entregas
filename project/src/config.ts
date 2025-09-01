@@ -6,7 +6,12 @@ export function getApiBaseUrl(): string {
   if (envUrl && envUrl.length > 0) return envUrl;
 
   if (typeof window !== 'undefined' && window.location?.origin) {
-    return window.location.origin;
+    // Se estiver rodando na porta 5173 (frontend), usar porta 4000 (backend)
+    const origin = window.location.origin;
+    if (origin.includes(':5173')) {
+      return origin.replace(':5173', ':4000');
+    }
+    return origin;
   }
 
   return 'http://localhost:4000';

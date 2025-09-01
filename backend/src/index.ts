@@ -74,9 +74,23 @@ app.get('/auth/me', requireAuth(), async (req: any, res, next) => {
   } catch (e) { next(e); }
 });
 
-// Uploads
-app.post('/uploads', requireAuth(), upload.single('file'), (req, res) => {
-  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file?.filename}`;
+// Uploads (authenticated)
+app.post('/uploads', requireAuth(), upload.single('file'), (req: any, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file provided' });
+  }
+  
+  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+  res.status(201).json({ url });
+});
+
+// Public uploads (for QR flow)
+app.post('/public/uploads', upload.single('file'), (req: any, res) => {
+  if (!req.file) {
+    return res.status(400).json({ error: 'No file provided' });
+  }
+  
+  const url = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
   res.status(201).json({ url });
 });
 
@@ -595,9 +609,16 @@ const confirmSchema = z.object({
 app.put('/orders/:id/confirm-delivery', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
     const parsed = confirmSchema.parse(req.body);
+    
     const order = await prisma.order.findUnique({ where: { id: req.params.id }, include: { bed: { include: { sector: true } } } });
-    if (!order) return res.status(404).end();
-    if (req.user.role === 'manager' && order.bed.sector.clientId && req.user.clientId !== order.bed.sector.clientId) return res.status(403).json({ error: 'Forbidden' });
+    if (!order) {
+      return res.status(404).end();
+    }
+    
+    if (req.user.role === 'manager' && order.bed.sector.clientId && req.user.clientId !== order.bed.sector.clientId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+    
     const updated = await prisma.order.update({
       where: { id: req.params.id },
       data: {
@@ -610,7 +631,9 @@ app.put('/orders/:id/confirm-delivery', requireAuth(['admin','manager']), async 
       }
     });
     res.json(updated);
-  } catch (e) { next(e); }
+  } catch (e) { 
+    next(e); 
+  }
 });
 
 // Serve SPA (frontend) if enabled and available

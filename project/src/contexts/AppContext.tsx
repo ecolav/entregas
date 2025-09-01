@@ -7,23 +7,7 @@ import { useToast } from './ToastContext';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Cache para evitar requisições desnecessárias
-const cache = {
-  data: new Map<string, { data: unknown; timestamp: number; ttl: number }>(),
-  set: (key: string, data: unknown, ttl: number = 5 * 60 * 1000) => {
-    cache.data.set(key, { data, timestamp: Date.now(), ttl });
-  },
-  get: (key: string) => {
-    const item = cache.data.get(key);
-    if (!item) return null;
-    if (Date.now() - item.timestamp > item.ttl) {
-      cache.data.delete(key);
-      return null;
-    }
-    return item.data;
-  },
-  clear: () => cache.data.clear()
-};
+// Sistema de cache removido para garantir atualizações em tempo real
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -40,30 +24,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => getApiBaseUrl();
 
-  // Função otimizada para carregar dados com cache
-  const loadData = useCallback(async (forceRefresh = false) => {
+  // Função simplificada para carregar dados sempre frescos
+  const loadData = useCallback(async () => {
     const baseUrl = getBaseUrl();
     const token = localStorage.getItem('token');
     if (!baseUrl || !token) return;
 
     const authHeaders = { Authorization: `Bearer ${token}` } as const;
-    const cacheKey = `data_${user?.id || 'public'}`;
-    
-    // Verificar cache se não for refresh forçado
-    if (!forceRefresh) {
-      const cached = cache.get(cacheKey);
-      if (cached) {
-        setSectors(cached.sectors || []);
-        setBeds(cached.beds || []);
-        setLinenItems(cached.linenItems || []);
-        setOrders(cached.orders || []);
-        setStockMovements(cached.stockMovements || []);
-        setClients(cached.clients || []);
-        setSystemUsers(cached.systemUsers || []);
-        return;
-      }
-    }
-
 
     try {
       const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
@@ -96,28 +63,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setStockMovements(stockData);
       setSystemUsers(usersData);
 
-      // Salvar no cache
-      cache.set(cacheKey, {
-        sectors: sectorsData,
-        beds: bedsData,
-        linenItems: itemsData,
-        orders: ordersData,
-        stockMovements: stockData,
-        clients: clientsData,
-        systemUsers: usersData
-      }, 5 * 60 * 1000); // 5 minutos
-
       setLastRefresh(Date.now());
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
-    } finally {
-      // Loading completed
     }
   }, [user?.id, addToast]);
 
   const refreshAll = useCallback(async () => {
-    await loadData(true);
+    await loadData();
   }, [loadData]);
 
   const notify = (type: string) => {
@@ -131,10 +85,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user, loadData]);
 
-  // Limpar cache quando o usuário sair
+  // Limpar dados quando o usuário sair
   useEffect(() => {
     if (!user) {
-      cache.clear();
       setSectors([]);
       setBeds([]);
       setLinenItems([]);
@@ -145,16 +98,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   }, [user]);
 
-  // Auto-refresh a cada 2 minutos se o usuário estiver ativo
+  // Auto-refresh a cada 30 segundos se o usuário estiver ativo
   useEffect(() => {
     if (!user) return;
 
     const interval = setInterval(() => {
       const now = Date.now();
-      if (now - lastRefresh > 2 * 60 * 1000) { // 2 minutos
+      if (now - lastRefresh > 30 * 1000) { // 30 segundos
         loadData();
       }
-    }, 30 * 1000); // Verificar a cada 30 segundos
+    }, 10 * 1000); // Verificar a cada 10 segundos
 
     return () => clearInterval(interval);
   }, [user, lastRefresh, loadData]);
@@ -167,8 +120,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       ordersChannelRef.current.onmessage = async (ev) => {
         const type = ev?.data?.type as string | undefined;
         if (!type) return;
-        // For now, refresh everything on any known event to keep UI consistent
-        if (type === 'orders-changed' || type === 'beds-changed') {
+        // Refresh everything on any known event to keep UI consistent
+        if (type === 'orders-changed' || type === 'beds-changed' || type === 'sectors-changed' || type === 'items-changed') {
           await refreshAll();
         }
       };
@@ -190,10 +143,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const token = localStorage.getItem('token');
     if (!token) return;
     
-    // Atualizar a cada 3 segundos para melhor tempo real
+    // Atualizar a cada 1 segundo para tempo real máximo
     const id = setInterval(() => {
       void refreshAll();
-    }, 3000);
+    }, 1000);
     
     return () => clearInterval(id);
   }, [user, refreshAll]);
@@ -234,6 +187,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setSectors(prev => [...prev, created]);
+        // Atualização imediata para tempo real
+        await refreshAll();
+        notify('sectors-changed');
+        addToast({ type: 'success', message: 'Setor criado com sucesso' });
       }
     })();
   };
@@ -250,6 +207,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setSectors(prev => prev.map(s => s.id === id ? updated : s));
+        // Atualização imediata para tempo real
+        await refreshAll();
+        notify('sectors-changed');
+        addToast({ type: 'success', message: 'Setor atualizado com sucesso' });
       }
     })();
   };
@@ -284,6 +245,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setBeds(prev => [...prev, created]);
+        // Atualização imediata para tempo real
+        await refreshAll();
+        notify('beds-changed');
+        addToast({ type: 'success', message: 'Leito criado com sucesso' });
       }
     })();
   };
@@ -335,6 +300,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setLinenItems(prev => [...prev, created]);
+        // Atualização imediata para tempo real
+        await refreshAll();
+        notify('items-changed');
+        addToast({ type: 'success', message: 'Item criado com sucesso' });
       }
     })();
   };
@@ -351,6 +320,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setLinenItems(prev => prev.map(i => i.id === id ? updated : i));
+        // Atualização imediata para tempo real
+        await refreshAll();
+        notify('items-changed');
+        addToast({ type: 'success', message: 'Item atualizado com sucesso' });
       }
     })();
   };
@@ -386,8 +359,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setOrders(prev => [...prev, created]);
+        // Atualização imediata para tempo real
         await refreshAll();
         notify('orders-changed');
+        addToast({ type: 'success', message: 'Pedido criado com sucesso' });
       }
     })();
   };
@@ -404,8 +379,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setOrders(prev => prev.map(o => o.id === id ? updated : o));
+        // Atualização imediata para tempo real
         await refreshAll();
         notify('orders-changed');
+        addToast({ type: 'success', message: 'Status do pedido atualizado com sucesso' });
       }
     })();
   };
@@ -423,7 +400,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const created = await res.json();
         setStockMovements(prev => [...prev, created]);
+        // Atualização imediata para tempo real
         await refreshAll();
+        addToast({ type: 'success', message: 'Movimento de estoque registrado com sucesso' });
       }
     })();
   };
@@ -444,8 +423,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     form.append('file', params.file);
     const baseUrl = getApiBaseUrl();
     const token = localStorage.getItem('token');
+    
     try {
       const uploadRes = await fetch(`${baseUrl}/uploads`, { method: 'POST', headers: { Authorization: token ? `Bearer ${token}` : '' }, body: form });
+      
       if (!uploadRes.ok) {
         let message = 'Falha ao enviar comprovante';
         try { const j = await uploadRes.json(); message = j?.error || message; } catch { /* ignore */ }
@@ -456,16 +437,19 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const url = uploadJson.url as string;
 
       // Confirm delivery
-      const confirmRes = await fetch(`${baseUrl}/orders/${params.orderId}/confirm-delivery`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
-        body: JSON.stringify({
+      const confirmPayload = {
           receiverName: params.receiverName,
           confirmationType: params.confirmationType,
           confirmationUrl: url,
           deliveredByUserId: params.deliveredByUserId
-        })
+      };
+      
+      const confirmRes = await fetch(`${baseUrl}/orders/${params.orderId}/confirm-delivery`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
+        body: JSON.stringify(confirmPayload)
       });
+      
       if (!confirmRes.ok) {
         let message = 'Falha ao confirmar entrega';
         try { const j = await confirmRes.json(); message = j?.error || message; } catch { /* ignore */ }
@@ -473,15 +457,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         return;
       }
       const updated = await confirmRes.json();
-      // Locally update state (replace, not merge, to avoid duplicações de items)
-      setOrders(prev => prev.map(o => o.id === params.orderId ? (updated as unknown as Order) : o));
-      // Best-effort: refresh orders from API para refletir joins/campos
-      try {
-        const refresh = await fetch(`${baseUrl}/orders`, { headers: { Authorization: token ? `Bearer ${token}` : '' } });
-        if (refresh.ok) setOrders(await refresh.json());
-      } catch { /* ignore */ }
+      
+      // Atualizar todos os dados e notificar outras abas
+      await refreshAll();
+      notify('orders-changed');
+      
       addToast({ type: 'success', message: 'Entrega confirmada com sucesso' });
-    } catch {
+    } catch (error) {
       addToast({ type: 'error', message: 'Erro de rede na confirmação' });
     }
   };
@@ -532,6 +514,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       if (res.ok) {
         const updated = await res.json();
         setClients(prev => prev.map(c => (c.id === id ? updated : c)));
+        // Atualização imediata para tempo real
+        await refreshAll();
+        addToast({ type: 'success', message: 'Cliente atualizado com sucesso' });
       }
     })();
   };
@@ -565,10 +550,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
           body: JSON.stringify(user)
         });
-        if (res.ok) {
-          const created = await res.json();
-          setSystemUsers(prev => [...prev, created]);
-        } else {
+              if (res.ok) {
+        const created = await res.json();
+        setSystemUsers(prev => [...prev, created]);
+        // Atualização imediata para tempo real
+        await refreshAll();
+        addToast({ type: 'success', message: 'Usuário criado com sucesso' });
+      } else {
           let message = 'Falha ao criar usuário';
           try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
           addToast({ type: 'error', message });
@@ -590,10 +578,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
           body: JSON.stringify(user)
         });
-        if (res.ok) {
-          const updated = await res.json();
-          setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
-        } else {
+              if (res.ok) {
+        const updated = await res.json();
+        setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+        // Atualização imediata para tempo real
+        await refreshAll();
+        addToast({ type: 'success', message: 'Usuário atualizado com sucesso' });
+      } else {
           let message = 'Falha ao atualizar usuário';
           try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
           addToast({ type: 'error', message });
