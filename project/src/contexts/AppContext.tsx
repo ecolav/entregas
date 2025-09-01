@@ -9,8 +9,8 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Cache para evitar requisições desnecessárias
 const cache = {
-  data: new Map<string, { data: any; timestamp: number; ttl: number }>(),
-  set: (key: string, data: any, ttl: number = 5 * 60 * 1000) => {
+  data: new Map<string, { data: unknown; timestamp: number; ttl: number }>(),
+  set: (key: string, data: unknown, ttl: number = 5 * 60 * 1000) => {
     cache.data.set(key, { data, timestamp: Date.now(), ttl });
   },
   get: (key: string) => {
@@ -187,7 +187,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       try { ordersChannelRef.current?.close(); } catch { /* ignore */ }
       window.removeEventListener('focus', onFocus);
     };
-  }, []);
+  }, [refreshAll]);
 
   // Periodic refresh while authenticated (cross-device updates when QR flow is used)
   useEffect(() => {
@@ -197,7 +197,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       void refreshAll();
     }, 5000);
     return () => clearInterval(id);
-  }, [user]);
+  }, [user, refreshAll]);
 
   // Add sector reference to beds
   const bedsWithSectors = beds.map(bed => ({
@@ -206,7 +206,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   }));
 
   // Ensure orders are unique by id (avoid transient duplicates on UI)
-  const uniqueOrders = React.useMemo(() => {
+  const uniqueOrders = useMemo(() => {
     const byId = new Map<string, Order>();
     for (const o of orders) byId.set(o.id, o);
     return Array.from(byId.values());
