@@ -21,6 +21,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
 
   const [lastRefresh, setLastRefresh] = useState<number>(0);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoading, setIsInitialLoading] = useState(true);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => getApiBaseUrl();
 
@@ -30,6 +32,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const token = localStorage.getItem('token');
     if (!baseUrl || !token) return;
 
+    setIsLoading(true);
     const authHeaders = { Authorization: `Bearer ${token}` } as const;
 
     try {
@@ -67,6 +70,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
       addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
+    } finally {
+      setIsLoading(false);
+      setIsInitialLoading(false);
     }
   }, [user?.id, addToast]);
 
@@ -624,6 +630,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       stockMovements,
       clients,
       systemUsers,
+      isLoading,
+      isInitialLoading,
       addSector,
       updateSector,
       deleteSector,

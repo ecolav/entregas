@@ -24,6 +24,12 @@ const OrderPage: React.FC = () => {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [publicPendingOrder, setPublicPendingOrder] = useState<null | import('../types').Order>(null);
   const [publicItems, setPublicItems] = useState<LinenItem[]>([]);
+  
+  // Estados de carregamento
+  const [isLoadingBed, setIsLoadingBed] = useState(false);
+  const [isLoadingItems, setIsLoadingItems] = useState(false);
+  const [isLoadingOrder, setIsLoadingOrder] = useState(false);
+  const [isConfirmingDelivery, setIsConfirmingDelivery] = useState(false);
 
   // Get token from URL
   useEffect(() => {
@@ -34,7 +40,9 @@ const OrderPage: React.FC = () => {
       // Try local cache first
       const local = getBedByToken(token);
       if (local) { setBed(local); return; }
+      
       // Fallback to public API (no auth required)
+      setIsLoadingBed(true);
       (async () => {
         try {
           const baseUrl = getApiBaseUrl();
@@ -44,6 +52,9 @@ const OrderPage: React.FC = () => {
             setBed(b);
           }
         } catch { /* ignore */ }
+        finally {
+          setIsLoadingBed(false);
+        }
       })();
     }
   }, [location.search, getBedByToken]);
@@ -54,6 +65,8 @@ const OrderPage: React.FC = () => {
     if (hasAuth) return; // context will handle
     if (!bed) return;
     if (Array.isArray(linenItems) && linenItems.length > 0) return;
+    
+    setIsLoadingItems(true);
     (async () => {
       try {
         const base = getApiBaseUrl();
@@ -64,6 +77,9 @@ const OrderPage: React.FC = () => {
           setPublicItems(items as LinenItem[]);
         }
       } catch { /* ignore */ }
+      finally {
+        setIsLoadingItems(false);
+      }
     })();
   }, [bed, linenItems]);
 
@@ -222,6 +238,21 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     setIsSubmitting(false);
   };
 
+  // Tela de carregamento inicial
+  if (isLoadingBed) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-xl p-8 shadow-lg text-center max-w-md w-full">
+          <div className="w-16 h-16 mx-auto mb-4 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Carregando...</h2>
+          <p className="text-gray-600">
+            Verificando informações do leito...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   if (!bed) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
@@ -310,9 +341,17 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
             </p>
             <button
               onClick={() => setConfirmOpen(true)}
-              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium"
+              disabled={isConfirmingDelivery}
+              className="w-full bg-green-600 hover:bg-green-700 text-white py-2 rounded-lg font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
             >
-              Confirmar Entrega (Assinatura/Foto)
+              {isConfirmingDelivery ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Confirmando...
+                </>
+              ) : (
+                'Confirmar Entrega (Assinatura/Foto)'
+              )}
             </button>
           </div>
         ) : (
@@ -329,8 +368,14 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
             <p className="text-sm text-gray-600">Selecione os itens necessários</p>
           </div>
 
-          <div className="divide-y divide-gray-100">
-            {itemsSource.map((item) => (
+          {isLoadingItems ? (
+            <div className="p-6 text-center">
+              <div className="w-8 h-8 mx-auto mb-3 border-2 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+              <p className="text-sm text-gray-600">Carregando itens disponíveis...</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-gray-100">
+              {itemsSource.map((item) => (
               <div key={item.id} className="p-6">
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
@@ -370,7 +415,8 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
                 </div>
               </div>
             ))}
-          </div>
+            </div>
+          )}
         </div>
 
         {/* Additional Info */}
@@ -462,6 +508,7 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
         onConfirm={async ({ receiverName, confirmationType, file }) => {
           if (!pendingOrder) { setConfirmOpen(false); return; }
           
+          setIsConfirmingDelivery(true);
           console.log('🔍 Confirmando entrega:', { orderId: pendingOrder.id, receiverName, confirmationType });
           
           const hasAuth = typeof window !== 'undefined' && typeof window.localStorage !== 'undefined' && !!window.localStorage.getItem('token');
@@ -480,7 +527,9 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
             const up = await fetch(`${base}/public/uploads`, { method: 'POST', body: form });
             if (!up.ok) { 
               console.error('🔍 Erro no upload:', up.status);
-              setConfirmOpen(false); 
+              setConfirmOpen(false);
+            setIsConfirmingDelivery(false);
+            setIsConfirmingDelivery(false); 
               return; 
             }
             const { url } = await up.json();
@@ -496,12 +545,13 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
               body: JSON.stringify({ token: tokenParam, receiverName, confirmationType, confirmationUrl: url })
             });
             
-            if (!confirmRes.ok) {
-              console.error('🔍 Erro ao confirmar entrega:', confirmRes.status);
-              const errorText = await confirmRes.text();
-              console.error('🔍 Detalhes do erro:', errorText);
-              return;
-            }
+                         if (!confirmRes.ok) {
+               console.error('🔍 Erro ao confirmar entrega:', confirmRes.status);
+               const errorText = await confirmRes.text();
+               console.error('🔍 Detalhes do erro:', errorText);
+               setIsConfirmingDelivery(false);
+               return;
+             }
             
                          console.log('🔍 Entrega confirmada com sucesso!');
              

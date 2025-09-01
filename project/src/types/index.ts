@@ -114,6 +114,8 @@ export interface AppContextType {
   stockMovements: StockMovement[];
   clients: Client[];
   systemUsers: SystemUser[];
+  isLoading: boolean;
+  isInitialLoading: boolean;
   addSector: (sector: Omit<Sector, 'id' | 'createdAt'>) => void;
   updateSector: (id: string, sector: Partial<Sector>) => void;
   deleteSector: (id: string) => void;

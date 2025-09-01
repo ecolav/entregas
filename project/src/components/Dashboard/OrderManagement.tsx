@@ -4,11 +4,12 @@ import { Search, Filter, Eye, Clock, CheckCircle, XCircle, Package } from 'lucid
 import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
 
 const OrderManagement: React.FC = () => {
-  const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
+  const { orders, updateOrderStatus, confirmOrderDelivery, isLoading } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [updatingOrderId, setUpdatingOrderId] = useState<string | null>(null);
   // receiver handled by ConfirmDeliveryModal
 
   const filteredOrders = orders.filter(order => {
@@ -52,7 +53,10 @@ const OrderManagement: React.FC = () => {
   };
 
   const handleStatusChange = (orderId: string, newStatus: import('../../types').Order['status']) => {
+    setUpdatingOrderId(orderId);
     updateOrderStatus(orderId, newStatus);
+    // Reset after a short delay to show loading state
+    setTimeout(() => setUpdatingOrderId(null), 1000);
   };
 
   return (
@@ -156,16 +160,25 @@ const OrderManagement: React.FC = () => {
                     {order.status !== 'delivered' && (
                       <button
                         onClick={() => { setSelectedOrder(order); setConfirmOpen(true); }}
-                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded"
+                        disabled={updatingOrderId === order.id}
+                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
-                        Confirmar Entrega
+                        {updatingOrderId === order.id ? (
+                          <>
+                            <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin mr-1"></div>
+                            Atualizando...
+                          </>
+                        ) : (
+                          'Confirmar Entrega'
+                        )}
                       </button>
                     )}
                     
                     <select
                       value={order.status}
-                      onChange={(e) => handleStatusChange(order.id, e.target.value)}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      onChange={(e) => handleStatusChange(order.id, e.target.value as import('../../types').Order['status'])}
+                      disabled={updatingOrderId === order.id}
+                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="pending">Pendente</option>
                       <option value="preparing">Em Separação</option>

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 
 const Overview: React.FC = () => {
-  const { sectors, beds, linenItems, orders } = useApp();
+  const { sectors, beds, linenItems, orders, isLoading } = useApp();
 
   const occupiedBeds = beds.filter(bed => bed.status === 'occupied').length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
@@ -58,6 +58,8 @@ const Overview: React.FC = () => {
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Visão Geral</h2>
         <p className="text-gray-600">Dashboard do sistema de gestão de enxoval</p>
       </div>
+
+
 
       {/* Stats Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
