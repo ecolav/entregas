@@ -19,11 +19,7 @@ const StockManagement: React.FC = () => {
     const item = linenItems.find(i => i.id === selectedItem);
     if (!item) return;
 
-    const newStock = movementType === 'in' 
-      ? item.currentStock + quantity
-      : Math.max(0, item.currentStock - quantity);
-
-    updateLinenItem(item.id, { currentStock: newStock });
+    // Removida a atualização manual do estoque - addStockMovement já faz isso no backend
     addStockMovement({
       itemId: item.id,
       type: movementType,
