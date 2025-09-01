@@ -174,13 +174,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       };
     } catch { /* ignore */ }
     const onFocus = async () => {
-      const baseUrl = getBaseUrl();
-      const token = localStorage.getItem('token');
-      if (!baseUrl || !token) return;
-      try {
-        const res = await fetch(`${baseUrl}/orders`, { headers: { Authorization: `Bearer ${token}` } });
-        if (res.ok) setOrders(await res.json());
-      } catch { /* ignore */ }
+      // Atualizar todos os dados quando a aba ganhar foco
+      await refreshAll();
     };
     window.addEventListener('focus', onFocus);
     return () => {
@@ -191,11 +186,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   // Periodic refresh while authenticated (cross-device updates when QR flow is used)
   useEffect(() => {
+    if (!user) return;
     const token = localStorage.getItem('token');
     if (!token) return;
+    
+    // Atualizar a cada 3 segundos para melhor tempo real
     const id = setInterval(() => {
       void refreshAll();
-    }, 5000);
+    }, 3000);
+    
     return () => clearInterval(id);
   }, [user, refreshAll]);
 
