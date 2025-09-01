@@ -195,18 +195,15 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
     // Generate WhatsApp link (prefer client-configured number)
     // Try to use client from context (when authenticated), otherwise use public bed.sector.client from API
     const clientFromCtx = clients.find(c => c.id === bed?.sector?.clientId);
-    const bedSectorClient = (bed as any)?.sector?.client;
+    const bedSectorClient = (bed as { sector?: { client?: { whatsappNumber?: string } } })?.sector?.client;
     
     // Determine which number to use
     let number: string | undefined;
-    let numberSource: string = 'none';
     
     if (clientFromCtx?.whatsappNumber) {
       number = clientFromCtx.whatsappNumber;
-      numberSource = 'context';
     } else if (bedSectorClient?.whatsappNumber) {
       number = bedSectorClient.whatsappNumber;
-      numberSource = 'bed_sector_client';
     }
     
     // Don't use any fallback number - if no number is configured, WhatsApp will open without a specific number

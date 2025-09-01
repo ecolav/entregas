@@ -5,7 +5,7 @@ import { Package, TrendingUp, TrendingDown, Plus, Minus, FileText, MessageCircle
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const StockManagement: React.FC = () => {
-  const { linenItems, addStockMovement, updateLinenItem, clients } = useApp();
+  const { linenItems, addStockMovement, clients } = useApp();
   const { user } = useAuth();
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedItem, setSelectedItem] = useState<string>('');
