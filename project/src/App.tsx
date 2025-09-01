@@ -7,6 +7,7 @@ import { useLocation } from './hooks/useLocation';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard/Dashboard';
 import OrderPage from './components/OrderPage';
+import LoadingSpinner from './components/LoadingSpinner';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -27,10 +28,7 @@ const AppContent: React.FC = () => {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Carregando...</p>
-        </div>
+        <LoadingSpinner size="lg" text="Inicializando aplicação..." />
       </div>
     );
   }

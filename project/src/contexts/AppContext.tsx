@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useRef, useCallback, useMemo } from 'react';
 import { AppContextType, Sector, Bed, LinenItem, Order, StockMovement, Client, SystemUser, SystemUserInput } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import { useAuth } from './AuthContext';
@@ -7,7 +7,23 @@ import { useToast } from './ToastContext';
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Sem mocks: estados iniciam vazios e carregam da API
+// Cache para evitar requisições desnecessárias
+const cache = {
+  data: new Map<string, { data: any; timestamp: number; ttl: number }>(),
+  set: (key: string, data: any, ttl: number = 5 * 60 * 1000) => {
+    cache.data.set(key, { data, timestamp: Date.now(), ttl });
+  },
+  get: (key: string) => {
+    const item = cache.data.get(key);
+    if (!item) return null;
+    if (Date.now() - item.timestamp > item.ttl) {
+      cache.data.delete(key);
+      return null;
+    }
+    return item.data;
+  },
+  clear: () => cache.data.clear()
+};
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const { user } = useAuth();
@@ -19,14 +35,36 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [stockMovements, setStockMovements] = useState<StockMovement[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [systemUsers, setSystemUsers] = useState<SystemUser[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(0);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => getApiBaseUrl();
 
-  const refreshAll = async () => {
+  // Função otimizada para carregar dados com cache
+  const loadData = useCallback(async (forceRefresh = false) => {
     const baseUrl = getBaseUrl();
     const token = localStorage.getItem('token');
     if (!baseUrl || !token) return;
+
     const authHeaders = { Authorization: `Bearer ${token}` } as const;
+    const cacheKey = `data_${user?.id || 'public'}`;
+    
+    // Verificar cache se não for refresh forçado
+    if (!forceRefresh) {
+      const cached = cache.get(cacheKey);
+      if (cached) {
+        setSectors(cached.sectors || []);
+        setBeds(cached.beds || []);
+        setLinenItems(cached.linenItems || []);
+        setOrders(cached.orders || []);
+        setStockMovements(cached.stockMovements || []);
+        setClients(cached.clients || []);
+        setSystemUsers(cached.systemUsers || []);
+        return;
+      }
+    }
+
+    setIsLoading(true);
     try {
       const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
         fetch(`${baseUrl}/clients`, { headers: authHeaders }),
@@ -37,79 +75,89 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
         fetch(`${baseUrl}/users`, { headers: authHeaders }),
       ]);
-      if (clientsRes.ok) setClients(await clientsRes.json());
-      if (sectorsRes.ok) setSectors(await sectorsRes.json());
-      if (bedsRes.ok) setBeds(await bedsRes.json());
-      if (itemsRes.ok) setLinenItems(await itemsRes.json());
-      if (ordersRes.ok) setOrders(await ordersRes.json());
-      if (stockRes.ok) setStockMovements(await stockRes.json());
-      if (usersRes.ok) setSystemUsers(await usersRes.json());
-    } catch { /* ignore */ }
-  };
+
+      const results = await Promise.all([
+        clientsRes.ok ? clientsRes.json() : [],
+        sectorsRes.ok ? sectorsRes.json() : [],
+        bedsRes.ok ? bedsRes.json() : [],
+        itemsRes.ok ? itemsRes.json() : [],
+        ordersRes.ok ? ordersRes.json() : [],
+        stockRes.ok ? stockRes.json() : [],
+        usersRes.ok ? usersRes.json() : [],
+      ]);
+
+      const [clientsData, sectorsData, bedsData, itemsData, ordersData, stockData, usersData] = results;
+
+      setClients(clientsData);
+      setSectors(sectorsData);
+      setBeds(bedsData);
+      setLinenItems(itemsData);
+      setOrders(ordersData);
+      setStockMovements(stockData);
+      setSystemUsers(usersData);
+
+      // Salvar no cache
+      cache.set(cacheKey, {
+        sectors: sectorsData,
+        beds: bedsData,
+        linenItems: itemsData,
+        orders: ordersData,
+        stockMovements: stockData,
+        clients: clientsData,
+        systemUsers: usersData
+      }, 5 * 60 * 1000); // 5 minutos
+
+      setLastRefresh(Date.now());
+    } catch (error) {
+      console.error('Erro ao carregar dados:', error);
+      addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [user?.id, addToast]);
+
+  const refreshAll = useCallback(async () => {
+    await loadData(true);
+  }, [loadData]);
 
   const notify = (type: string) => {
     try { new BroadcastChannel('ecolav-app').postMessage({ type }); } catch { /* no-op */ }
   };
 
-  // Sem persistência em localStorage (exceto token no Auth)
-
-  // Load from API if available
+  // Carregar dados quando o usuário logar
   useEffect(() => {
-    const baseUrl = getBaseUrl();
-    const token = localStorage.getItem('token');
-    if (!token) return; // evita 401 antes do login
-    (async () => {
-      try {
-        const authHeaders = (() => {
-          return { Authorization: `Bearer ${token}` } as const;
-        })();
-        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
-          fetch(`${baseUrl}/clients`, { headers: authHeaders }),
-          fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
-          fetch(`${baseUrl}/beds`, { headers: authHeaders }),
-          fetch(`${baseUrl}/items`, { headers: authHeaders }),
-          fetch(`${baseUrl}/orders`, { headers: authHeaders }),
-          fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
-          fetch(`${baseUrl}/users`, { headers: authHeaders }),
-        ]);
-        if (clientsRes.ok) setClients(await clientsRes.json());
-        if (sectorsRes.ok) setSectors(await sectorsRes.json());
-        if (bedsRes.ok) setBeds(await bedsRes.json());
-        if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        if (ordersRes.ok) setOrders(await ordersRes.json());
-        if (stockRes.ok) setStockMovements(await stockRes.json());
-        if (usersRes.ok) setSystemUsers(await usersRes.json());
-      } catch { void 0; }
-    })();
-  }, []);
+    if (user) {
+      loadData();
+    }
+  }, [user, loadData]);
 
-  // Re-load from API when user logs in (token available)
+  // Limpar cache quando o usuário sair
   useEffect(() => {
-    const baseUrl = getBaseUrl();
-    const token = localStorage.getItem('token');
-    if (!token || !user) return;
-    (async () => {
-      try {
-        const authHeaders = { Authorization: `Bearer ${token}` } as const;
-        const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
-          fetch(`${baseUrl}/clients`, { headers: authHeaders }),
-          fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
-          fetch(`${baseUrl}/beds`, { headers: authHeaders }),
-          fetch(`${baseUrl}/items`, { headers: authHeaders }),
-          fetch(`${baseUrl}/orders`, { headers: authHeaders }),
-          fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
-          fetch(`${baseUrl}/users`, { headers: authHeaders }),
-        ]);
-        if (clientsRes.ok) setClients(await clientsRes.json());
-        if (sectorsRes.ok) setSectors(await sectorsRes.json());
-        if (bedsRes.ok) setBeds(await bedsRes.json());
-        if (itemsRes.ok) setLinenItems(await itemsRes.json());
-        if (ordersRes.ok) setOrders(await ordersRes.json());
-        if (stockRes.ok) setStockMovements(await stockRes.json());
-        if (usersRes.ok) setSystemUsers(await usersRes.json());
-      } catch { void 0; }
-    })();
+    if (!user) {
+      cache.clear();
+      setSectors([]);
+      setBeds([]);
+      setLinenItems([]);
+      setOrders([]);
+      setStockMovements([]);
+      setClients([]);
+      setSystemUsers([]);
+    }
   }, [user]);
+
+  // Auto-refresh a cada 2 minutos se o usuário estiver ativo
+  useEffect(() => {
+    if (!user) return;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      if (now - lastRefresh > 2 * 60 * 1000) { // 2 minutos
+        loadData();
+      }
+    }, 30 * 1000); // Verificar a cada 30 segundos
+
+    return () => clearInterval(interval);
+  }, [user, lastRefresh, loadData]);
 
   // Cross-tab/tab-to-dashboard updates: listen for events and refresh data
   useEffect(() => {
