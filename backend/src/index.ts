@@ -61,8 +61,21 @@ function requireAuth(roles?: Array<'admin' | 'manager'>) {
 app.get('/health', (_req, res) => {
   res.json({ status: 'ok', time: new Date().toISOString() });
 });
+// Auth verification endpoint
+app.get('/auth/me', requireAuth(), async (req: any, res, next) => {
+  try {
+    // Return user info from JWT payload
+    res.json({
+      id: req.user.sub,
+      email: req.user.email,
+      role: req.user.role,
+      clientId: req.user.clientId
+    });
+  } catch (e) { next(e); }
+});
+
 // Uploads
-app.post('/uploads', upload.single('file'), (req, res) => {
+app.post('/uploads', requireAuth(), upload.single('file'), (req, res) => {
   const url = `${req.protocol}://${req.get('host')}/uploads/${req.file?.filename}`;
   res.status(201).json({ url });
 });
