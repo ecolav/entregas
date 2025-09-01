@@ -461,7 +461,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         addToast({ type: 'error', message });
         return;
       }
-      const updated = await confirmRes.json();
+             await confirmRes.json();
       
       // Atualizar todos os dados e notificar outras abas
       await refreshAll();
