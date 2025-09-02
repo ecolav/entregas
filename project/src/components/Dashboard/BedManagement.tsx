@@ -276,10 +276,11 @@ const BedManagement: React.FC = () => {
         </div>
         <button
           onClick={() => setIsAddModalOpen(true)}
-          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-2 transition-all"
+          className="bg-gradient-to-r from-blue-600 to-green-600 text-white px-2 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 flex items-center space-x-1 sm:space-x-2 transition-all text-xs sm:text-sm"
         >
-          <Plus className="w-5 h-5" />
-          <span>Novo Leito</span>
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          <span className="hidden sm:inline">Novo Leito</span>
+          <span className="sm:hidden">Novo</span>
         </button>
       </div>
 
@@ -333,36 +334,39 @@ const BedManagement: React.FC = () => {
                 />
               </div>
               
-              <div className="flex space-x-2">
+              <div className="flex space-x-1 sm:space-x-2">
                 <button
                   onClick={() => handleCopyToken(bed.token)}
-                  className="flex-1 flex items-center justify-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all text-sm"
+                  className="flex-1 flex items-center justify-center space-x-1 sm:space-x-2 px-2 sm:px-3 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-all text-xs sm:text-sm"
                 >
                   {copiedToken === bed.token ? (
                     <>
-                      <Check className="w-4 h-4" />
-                      <span>Copiado!</span>
+                      <Check className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Copiado!</span>
+                      <span className="sm:hidden">✓</span>
                     </>
                   ) : (
                     <>
-                      <Copy className="w-4 h-4" />
-                      <span>Copiar Link</span>
+                      <Copy className="w-3 h-3 sm:w-4 sm:h-4" />
+                      <span className="hidden sm:inline">Copiar Link</span>
+                      <span className="sm:hidden">Copiar</span>
                     </>
                   )}
                 </button>
                 <a
                   href={generateQRUrl(bed.token)}
                   download={`qr-leito-${bed.number}.png`}
-                  className="flex items-center justify-center px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-all"
+                  className="flex items-center justify-center px-2 sm:px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-all"
+                  title="Baixar QR Code"
                 >
-                  <Download className="w-4 h-4" />
+                  <Download className="w-3 h-3 sm:w-4 sm:h-4" />
                 </a>
                 <button
                   onClick={() => handlePrintLabel({ id: bed.id, number: bed.number, token: bed.token, sector: { name: bed.sector?.name } }, batchMode)}
-                  className="flex items-center justify-center px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all"
+                  className="flex items-center justify-center px-2 sm:px-3 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-all"
                   title="Imprimir etiqueta"
                 >
-                  <Printer className="w-4 h-4" />
+                  <Printer className="w-3 h-3 sm:w-4 sm:h-4" />
                 </button>
               </div>
 
@@ -512,7 +516,7 @@ const BedManagement: React.FC = () => {
                   <option value="occupied">Ocupado</option>
                 </select>
               </div>
-              <div className="flex space-x-3 pt-4">
+              <div className="flex space-x-2 sm:space-x-3 pt-4">
                 <button
                   type="button"
                   onClick={() => {
@@ -520,13 +524,13 @@ const BedManagement: React.FC = () => {
                     setEditingBed(null);
                     setFormData({ number: '', sectorId: '', status: 'free' as 'free' | 'occupied' });
                   }}
-                  className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all"
+                  className="flex-1 px-2 sm:px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-all text-xs sm:text-sm"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all"
+                  className="flex-1 bg-gradient-to-r from-blue-600 to-green-600 text-white px-2 sm:px-4 py-2 rounded-lg hover:from-blue-700 hover:to-green-700 transition-all text-xs sm:text-sm"
                 >
                   {editingBed ? 'Salvar' : 'Criar'}
                 </button>

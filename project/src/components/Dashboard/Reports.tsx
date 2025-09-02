@@ -263,24 +263,27 @@ const Reports: React.FC = () => {
         <div className="mt-4 flex flex-wrap gap-2 justify-end">
           <button
             onClick={exportData}
-            className="flex items-center space-x-2 bg-gray-100 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-200 transition-all"
+            className="flex items-center space-x-1 sm:space-x-2 bg-gray-100 text-gray-800 px-2 sm:px-4 py-2 rounded-lg hover:bg-gray-200 transition-all text-xs sm:text-sm"
           >
-            <Download className="w-4 h-4" />
-            <span>Exportar JSON</span>
+            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Exportar JSON</span>
+            <span className="sm:hidden">JSON</span>
           </button>
           <button
             onClick={exportPdf}
-            className="flex items-center space-x-2 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all"
+            className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm"
           >
-            <FileText className="w-4 h-4" />
-            <span>Exportar PDF</span>
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">PDF</span>
           </button>
           <button
             onClick={exportWhatsApp}
-            className="flex items-center space-x-2 bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 transition-all"
+            className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-4 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm"
           >
-            <MessageCircle className="w-4 h-4" />
-            <span>Enviar WhatsApp</span>
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Enviar WhatsApp</span>
+            <span className="sm:hidden">WhatsApp</span>
           </button>
         </div>
       </div>

@@ -134,13 +134,15 @@ const StockManagement: React.FC = () => {
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
           )}
-          <button onClick={exportPdf} className="flex items-center space-x-2 bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-all">
-            <FileText className="w-4 h-4" />
-            <span>Exportar PDF</span>
+          <button onClick={exportPdf} className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm">
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">PDF</span>
           </button>
-          <button onClick={exportWhatsApp} className="flex items-center space-x-2 bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-all">
-            <MessageCircle className="w-4 h-4" />
-            <span>Enviar WhatsApp</span>
+          <button onClick={exportWhatsApp} className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm">
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Enviar WhatsApp</span>
+            <span className="sm:hidden">WhatsApp</span>
           </button>
         </div>
       </div>

@@ -277,17 +277,17 @@ ${observations ? `📝 *Observações:* ${observations}\n` : ''}${scheduledDeliv
           <p className="text-gray-600 mb-6">
             Seu pedido foi registrado no sistema e o WhatsApp foi aberto para envio à lavanderia.
           </p>
-          <button
-            onClick={() => {
-              setSubmitted(false);
-              setCart({});
-              setObservations('');
-              setScheduledDelivery('');
-            }}
-            className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-3 rounded-lg font-medium hover:from-blue-700 hover:to-green-700 transition-all"
-          >
-            Fazer Novo Pedido
-          </button>
+                     <button
+             onClick={() => {
+               setSubmitted(false);
+               setCart({});
+               setObservations('');
+               setScheduledDelivery('');
+             }}
+             className="w-full bg-gradient-to-r from-blue-600 to-green-600 text-white py-2 sm:py-3 rounded-lg font-medium hover:from-blue-700 hover:to-green-700 transition-all text-sm sm:text-base"
+           >
+             Fazer Novo Pedido
+           </button>
         </div>
       </div>
     );
