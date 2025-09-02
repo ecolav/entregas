@@ -67,8 +67,8 @@ const OrderManagement: React.FC = () => {
       </div>
 
       {/* Filters */}
-      <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-        <div className="flex flex-col sm:flex-row gap-4">
+      <div className="bg-white rounded-xl p-3 sm:p-4 shadow-sm border border-gray-100">
+        <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -76,7 +76,7 @@ const OrderManagement: React.FC = () => {
               placeholder="Buscar por leito ou setor..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
           </div>
           <div className="flex items-center space-x-2">
@@ -84,7 +84,7 @@ const OrderManagement: React.FC = () => {
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="px-2 sm:px-3 py-2 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             >
               <option value="all">Todos os Status</option>
               <option value="pending">Pendente</option>
@@ -108,11 +108,11 @@ const OrderManagement: React.FC = () => {
           <>
           <div className="divide-y divide-gray-100">
             {filteredOrders.map((order) => (
-              <div key={order.id} className="p-6 hover:bg-gray-50 transition-colors transform animate-fade-in">
-                <div className="flex items-start justify-between">
+              <div key={order.id} className="p-4 sm:p-6 hover:bg-gray-50 transition-colors transform animate-fade-in">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3 sm:gap-0">
                   <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <h3 className="font-semibold text-gray-900">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 mb-2">
+                      <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
                         {order.bed?.sector?.name} - Leito {order.bed?.number}
                       </h3>
                       <div className="flex items-center space-x-2">
@@ -128,7 +128,7 @@ const OrderManagement: React.FC = () => {
                       </div>
                     </div>
                     
-                    <div className="text-sm text-gray-600 mb-3">
+                    <div className="text-xs sm:text-sm text-gray-600 mb-3">
                       <p><span className="font-medium">Itens:</span> {order.items.map(item => `${item.quantity}x ${item.item?.name}`).join(', ')}</p>
                       <p><span className="font-medium">Data:</span> {new Date(order.createdAt).toLocaleString('pt-BR')}</p>
                       {order.status === 'delivered' && order.receiverName && (
@@ -149,7 +149,7 @@ const OrderManagement: React.FC = () => {
                     </div>
                   </div>
                   
-                  <div className="flex items-center space-x-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:space-x-2">
                     <button
                       onClick={() => setSelectedOrder(order)}
                       className="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
@@ -161,15 +161,19 @@ const OrderManagement: React.FC = () => {
                       <button
                         onClick={() => { setSelectedOrder(order); setConfirmOpen(true); }}
                         disabled={updatingOrderId === order.id}
-                        className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
+                        className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-green-600 hover:bg-green-700 text-white rounded disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                       >
                         {updatingOrderId === order.id ? (
                           <>
                             <div className="w-3 h-3 border border-white border-t-transparent rounded-full animate-spin mr-1"></div>
-                            Atualizando...
+                            <span className="hidden sm:inline">Atualizando...</span>
+                            <span className="sm:hidden">...</span>
                           </>
                         ) : (
-                          'Confirmar Entrega'
+                          <>
+                            <span className="hidden sm:inline">Confirmar Entrega</span>
+                            <span className="sm:hidden">Confirmar</span>
+                          </>
                         )}
                       </button>
                     )}
@@ -178,7 +182,7 @@ const OrderManagement: React.FC = () => {
                       value={order.status}
                       onChange={(e) => handleStatusChange(order.id, e.target.value as import('../../types').Order['status'])}
                       disabled={updatingOrderId === order.id}
-                      className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="px-2 py-1 text-xs sm:text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <option value="pending">Pendente</option>
                       <option value="preparing">Em Separação</option>
