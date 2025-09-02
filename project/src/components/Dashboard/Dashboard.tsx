@@ -8,11 +8,12 @@ import BedManagement from './BedManagement';
 import LinenManagement from './LinenManagement';
 import OrderManagement from './OrderManagement';
 import StockManagement from './StockManagement';
+import WeightManagement from './WeightManagement';
 import Reports from './Reports';
 import ClientManagement from './ClientManagement';
 import UserManagement from './UserManagement';
 
-type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'reports' | 'clients' | 'users';
+type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'reports' | 'clients' | 'users';
 
 const Dashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
@@ -33,6 +34,8 @@ const Dashboard: React.FC = () => {
         return <OrderManagement />;
       case 'stock':
         return <StockManagement />;
+      case 'weight':
+        return <WeightManagement />;
       case 'reports':
         return <Reports />;
       case 'clients':
