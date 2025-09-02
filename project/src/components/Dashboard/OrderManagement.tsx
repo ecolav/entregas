@@ -138,7 +138,33 @@ const OrderManagement: React.FC = () => {
                         <p><span className="font-medium">Entregue em:</span> {new Date(order.deliveredAt).toLocaleString('pt-BR')}</p>
                       )}
                       {order.status === 'delivered' && order.confirmationUrl && (
-                        <p className="mt-1"><span className="font-medium">Comprovante:</span> <a href={order.confirmationUrl} target="_blank" rel="noreferrer" className="text-blue-600 underline">ver arquivo</a></p>
+                        <p className="mt-1">
+                          <span className="font-medium">Comprovante:</span> 
+                          <button 
+                            onClick={() => {
+                              try {
+                                const url = order.confirmationUrl;
+                                // Verificar se a URL é válida
+                                if (url && url.startsWith('http')) {
+                                  window.open(url, '_blank', 'noopener,noreferrer');
+                                } else if (url) {
+                                  // Se não for uma URL completa, tentar construir uma
+                                  const baseUrl = window.location.origin.includes('localhost') 
+                                    ? 'http://localhost:4000' 
+                                    : window.location.origin;
+                                  const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+                                  window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                                }
+                              } catch (error) {
+                                console.error('Erro ao abrir comprovante:', error);
+                                alert('Erro ao abrir o comprovante. Tente novamente.');
+                              }
+                            }}
+                            className="ml-1 text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                          >
+                            ver arquivo
+                          </button>
+                        </p>
                       )}
                       {order.observations && (
                         <p><span className="font-medium">Observações:</span> {order.observations}</p>
@@ -275,6 +301,35 @@ const OrderManagement: React.FC = () => {
                   )}
                   {selectedOrder.status === 'delivered' && selectedOrder.deliveredAt && (
                     <p><span className="font-medium">Entregue em:</span> {new Date(selectedOrder.deliveredAt).toLocaleString('pt-BR')}</p>
+                  )}
+                  {selectedOrder.status === 'delivered' && selectedOrder.confirmationUrl && (
+                    <p>
+                      <span className="font-medium">Comprovante:</span> 
+                      <button 
+                        onClick={() => {
+                          try {
+                            const url = selectedOrder.confirmationUrl;
+                            // Verificar se a URL é válida
+                            if (url && url.startsWith('http')) {
+                              window.open(url, '_blank', 'noopener,noreferrer');
+                            } else if (url) {
+                              // Se não for uma URL completa, tentar construir uma
+                              const baseUrl = window.location.origin.includes('localhost') 
+                                ? 'http://localhost:4000' 
+                                : window.location.origin;
+                              const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+                              window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                            }
+                          } catch (error) {
+                            console.error('Erro ao abrir comprovante:', error);
+                            alert('Erro ao abrir o comprovante. Tente novamente.');
+                          }
+                        }}
+                        className="ml-1 text-blue-600 hover:text-blue-800 underline cursor-pointer"
+                      >
+                        ver arquivo
+                      </button>
+                    </p>
                   )}
                 </div>
               </div>
