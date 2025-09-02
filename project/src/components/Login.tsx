@@ -91,11 +91,11 @@ const Login: React.FC = () => {
           </button>
         </form>
 
-        <div className="mt-8 p-4 bg-gray-50 rounded-lg">
-          <p className="text-sm text-gray-600 font-medium mb-2">Credenciais de teste:</p>
-          <div className="space-y-1 text-xs text-gray-500">
-            <p><span className="font-medium">Admin (seed):</span> admin@site.com / 123456</p>
-            <p><span className="font-medium">Admin (hospital):</span> admin@hospital.com / 123456</p>
+        <div className="mt-8 p-4 bg-blue-50 rounded-lg">
+          <div className="flex items-center justify-center space-x-2">
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+            <p className="text-sm text-blue-700 font-medium">Versão Beta</p>
+            <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
           </div>
         </div>
       </div>
