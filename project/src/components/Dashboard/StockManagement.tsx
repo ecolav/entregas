@@ -122,30 +122,30 @@ const StockManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
-          <p className="text-gray-600">Gerencie os estoques e movimentações</p>
-        </div>
-        <div className="flex gap-2">
-          {user?.role === 'admin' && (
-            <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent">
-              <option value="">Todos os clientes</option>
-              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-          )}
-          <button onClick={exportPdf} className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm">
-            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Exportar PDF</span>
-            <span className="sm:hidden">PDF</span>
-          </button>
-          <button onClick={exportWhatsApp} className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm">
-            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-            <span className="hidden sm:inline">Enviar WhatsApp</span>
-            <span className="sm:hidden">WhatsApp</span>
-          </button>
-        </div>
-      </div>
+             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+         <div>
+           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
+           <p className="text-sm sm:text-base text-gray-600">Gerencie os estoques e movimentações</p>
+         </div>
+         <div className="flex flex-wrap gap-2">
+           {user?.role === 'admin' && (
+             <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm">
+               <option value="">Todos os clientes</option>
+               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+             </select>
+           )}
+           <button onClick={exportPdf} className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm">
+             <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+             <span className="hidden sm:inline">Exportar PDF</span>
+             <span className="sm:hidden">PDF</span>
+           </button>
+           <button onClick={exportWhatsApp} className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm">
+             <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+             <span className="hidden sm:inline">Enviar WhatsApp</span>
+             <span className="sm:hidden">WhatsApp</span>
+           </button>
+         </div>
+       </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
