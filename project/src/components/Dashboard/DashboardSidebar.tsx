@@ -140,15 +140,18 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
              </div>
              
              <div className="space-y-4">
-               <div className="text-center">
-                 <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                   <Scale className="w-8 h-8 text-white" />
+                                <div className="text-center">
+                   <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-green-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                     <Scale className="w-8 h-8 text-white" />
+                   </div>
+                   <h4 className="text-xl font-bold text-gray-900 mb-2">Sistema de Gestão Ecolav</h4>
+                   <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium inline-block">
+                     Versão Beta 1.0.0
+                   </div>
+                   <p className="text-sm text-gray-600 mt-2">
+                     Parte do ambiente <span className="font-medium text-blue-600">Ecolav 360</span>
+                   </p>
                  </div>
-                 <h4 className="text-xl font-bold text-gray-900 mb-2">Sistema de Gestão Ecolav</h4>
-                 <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium inline-block">
-                   Versão Beta 1.0.0
-                 </div>
-               </div>
                
                <div className="space-y-3">
                  <div className="bg-gray-50 p-4 rounded-lg">

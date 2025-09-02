@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+ nforimport React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Scale, Package, CheckCircle, AlertTriangle, Plus, Trash2, Edit } from 'lucide-react';
 
