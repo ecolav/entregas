@@ -307,7 +307,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const payload = {
         ...item,
         // Se admin estiver filtrando um cliente, criar o item vinculado a esse cliente
-        clientId: (user?.role === 'admin' && adminClientIdFilter) ? adminClientIdFilter : (item as any).clientId
+        clientId: (user?.role === 'admin' && adminClientIdFilter) ? adminClientIdFilter : (item as Partial<LinenItem>).clientId
       };
       const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(payload) });
       if (res.ok) {
