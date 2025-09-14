@@ -51,7 +51,7 @@ const WeightManagement: React.FC = () => {
         const mapped: Cage[] = data.map((c) => ({ id: c.id, barcode: c.barcode, tareWeight: Number(c.tareWeight), createdAt: c.createdAt }));
         setCages(mapped);
       }
-    } catch (_err) { /* no-op */ }
+    } catch { /* no-op */ }
     finally { setLoadingCages(false); }
   }, [api, token]);
 
@@ -69,7 +69,7 @@ const WeightManagement: React.FC = () => {
         await fetchCages();
         addToast({ type: 'success', message: editingCage ? 'Gaiola atualizada!' : 'Gaiola cadastrada!' });
       }
-    } catch (_err) { /* no-op */ }
+    } catch { /* no-op */ }
   };
   const deleteCage = async (id: string) => {
     if (!confirm('Excluir esta gaiola?')) return;
@@ -82,12 +82,12 @@ const WeightManagement: React.FC = () => {
       addToast({ type: 'error', message: 'Informe o peso bruto para roupa limpa.' });
       return;
     }
-    const payload: any = { tipo: controlKind };
+    const payload: { tipo: 'suja'|'limpa'; peso_bruto_lavanderia?: number; prevista?: string; clientId?: string } = { tipo: controlKind };
     if (controlKind === 'limpa') payload.peso_bruto_lavanderia = Number(controlGross);
     if (controlKind === 'suja' && expectedDate && /^\d{4}-\d{2}-\d{2}$/.test(expectedDate)) payload.prevista = expectedDate;
     // Admin pode direcionar controle para cliente específico via filtro ativo
-    if (user?.role === 'admin' && adminClientIdFilter) (payload as any).clientId = adminClientIdFilter;
-    const res = await fetch(`${api}/controles`, { method: 'POST', headers: authHeaders as any, body: JSON.stringify(payload) });
+    if (user?.role === 'admin' && adminClientIdFilter) payload.clientId = adminClientIdFilter;
+    const res = await fetch(`${api}/controles`, { method: 'POST', headers: authHeaders as HeadersInit, body: JSON.stringify(payload) });
     if (res.ok) {
       const c = (await res.json()) as {
         id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; kind: 'suja'|'limpa'; referenceDate: string; createdAt: string;
@@ -116,7 +116,7 @@ const WeightManagement: React.FC = () => {
       const res = await fetch(`${api}/controles/${id}`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.ok) {
         const data = (await res.json()) as {
-          id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; createdAt: string; entries: Array<any>;
+          id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; createdAt: string; entries: Array<Record<string, unknown>>;
         };
         const normalized: WeighingControl = {
           id: data.id,
@@ -135,7 +135,9 @@ const WeightManagement: React.FC = () => {
           totalWeight: Number(e.totalWeight),
           netWeight: Number(e.netWeight),
           createdAt: String(e.createdAt),
-          cage: (e as any).cage ? { id: (e as any).cage.id as string, barcode: (e as any).cage.barcode as string, tareWeight: Number((e as any).cage.tareWeight), createdAt: (e as any).cage.createdAt as string } : undefined
+          cage: (e as { cage?: { id: string; barcode: string; tareWeight: number; createdAt: string } }).cage
+            ? { id: (e as { cage: { id: string } }).cage.id as string, barcode: (e as { cage: { barcode: string } }).cage.barcode as string, tareWeight: Number((e as { cage: { tareWeight: number } }).cage.tareWeight), createdAt: (e as { cage: { createdAt: string } }).cage.createdAt as string }
+            : undefined
         }));
         setEntries(mapped);
       }
@@ -145,7 +147,7 @@ const WeightManagement: React.FC = () => {
   const submitEntry = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentControl) return;
-    const body: any = { control_id: currentControl.id, peso_total: Number(entryForm.total) };
+    const body: { control_id: string; peso_total: number; cage_id?: string; peso_tara?: number } = { control_id: currentControl.id, peso_total: Number(entryForm.total) };
     if (entryForm.cageIdOrManual === 'cage') body.cage_id = entryForm.cageId;
     else body.peso_tara = Number(entryForm.tare || 0);
     setLoadingEntries(true);
@@ -250,7 +252,7 @@ const WeightManagement: React.FC = () => {
               <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-4 items-end">
                 <div>
                   <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                  <select value={controlKind} onChange={(e)=>setControlKind(e.target.value as any)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
+                  <select value={controlKind} onChange={(e)=>setControlKind(e.target.value as 'limpa'|'suja')} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="limpa">Roupa Limpa</option>
                     <option value="suja">Roupa Suja</option>
                   </select>
@@ -311,7 +313,7 @@ const WeightManagement: React.FC = () => {
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tara</label>
                     <div className="flex gap-2">
-                      <select value={entryForm.cageIdOrManual} onChange={(e)=>setEntryForm(v=>({...v, cageIdOrManual: e.target.value as any}))} className="px-2 py-2 border rounded-lg">
+                      <select value={entryForm.cageIdOrManual} onChange={(e)=>setEntryForm(v=>({...v, cageIdOrManual: e.target.value as 'cage'|'manual'}))} className="px-2 py-2 border rounded-lg">
                         <option value="cage">Gaiola</option>
                         <option value="manual">Manual</option>
                       </select>

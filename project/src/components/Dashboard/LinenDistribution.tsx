@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
-import { DistributedItem, Sector, Bed, LinenItem } from '../../types';
+import { DistributedItem, Sector, Bed } from '../../types';
 import { getApiBaseUrl } from '../../config';
 import { AlertTriangle, ChevronDown, ChevronRight, FileDown } from 'lucide-react';
-import { Skeleton, SkeletonCard } from '../Skeleton';
+import { SkeletonCard } from '../Skeleton';
 import { formatDateTimeISOToBR } from '../../utils/date';
 
 type SectorWithBeds = Sector & { beds: Bed[] };
@@ -24,7 +24,7 @@ const LinenDistribution: React.FC = () => {
     return sectorList.map(s => ({ ...s, beds: beds.filter(b => b.sectorId === s.id) }));
   }, [sectors, beds, sectorFilter]);
 
-  const fetchDistributed = async () => {
+  const fetchDistributed = React.useCallback(async () => {
     setLoading(true);
     const url = new URL(`${api}/distributed-items`);
     if (user?.role === 'admin' && adminClientIdFilter) url.searchParams.set('clientId', adminClientIdFilter);
@@ -35,9 +35,9 @@ const LinenDistribution: React.FC = () => {
       setItems(data);
     }
     setLoading(false);
-  };
+  }, [api, adminClientIdFilter, sectorFilter, token, user?.role]);
 
-  useEffect(() => { fetchDistributed(); }, [adminClientIdFilter, sectorFilter, user?.role]);
+  useEffect(() => { fetchDistributed(); }, [fetchDistributed]);
 
   const byBed = useMemo(() => {
     const map = new Map<string, DistributedItem[]>();
