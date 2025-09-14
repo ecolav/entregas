@@ -74,7 +74,7 @@ const StockManagement: React.FC = () => {
       <table>
         <thead><tr><th>Item</th><th>SKU</th><th>Estoque</th><th>Mínimo</th><th>Status</th></tr></thead>
         <tbody>
-          ${linenItems.map(i => `<tr><td>${i.name}</td><td>${i.sku}</td><td>${i.currentStock} ${i.unit}</td><td>${i.minimumStock} ${i.unit}</td><td><span class="badge ${i.currentStock <= i.minimumStock ? 'low' : 'ok'}">${i.currentStock <= i.minimumStock ? 'Baixo' : 'OK'}</span></td></tr>`).join('')}
+          ${visibleItems.map(i => `<tr><td>${i.name}</td><td>${i.sku}</td><td>${i.currentStock} ${i.unit}</td><td>${i.minimumStock} ${i.unit}</td><td><span class=\"badge ${i.currentStock <= i.minimumStock ? 'low' : 'ok'}\">${i.currentStock <= i.minimumStock ? 'Baixo' : 'OK'}</span></td></tr>`).join('')}
         </tbody>
       </table>
     </div>
