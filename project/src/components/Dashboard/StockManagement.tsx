@@ -115,6 +115,7 @@ const StockManagement: React.FC = () => {
       okItems.forEach(i => { lines.push(formatItem(i)); lines.push(''); });
     }
 
+    const visibleClientId = user?.role === 'admin' ? (selectedClientId || undefined) : user?.clientId;
     const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
     const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });
     window.open(url, '_blank');
@@ -123,29 +124,29 @@ const StockManagement: React.FC = () => {
   return (
     <div className="space-y-6">
              <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-         <div>
-           <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
-           <p className="text-sm sm:text-base text-gray-600">Gerencie os estoques e movimentações</p>
-         </div>
-         <div className="flex flex-wrap gap-2">
-           {user?.role === 'admin' && (
-             <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm">
-               <option value="">Todos os clientes</option>
-               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-             </select>
-           )}
-           <button onClick={exportPdf} className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm">
-             <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
-             <span className="hidden sm:inline">Exportar PDF</span>
-             <span className="sm:hidden">PDF</span>
-           </button>
-           <button onClick={exportWhatsApp} className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm">
-             <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
-             <span className="hidden sm:inline">Enviar WhatsApp</span>
-             <span className="sm:hidden">WhatsApp</span>
-           </button>
-         </div>
-       </div>
+        <div>
+          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">Controle de Estoque</h2>
+          <p className="text-sm sm:text-base text-gray-600">Gerencie os estoques e movimentações</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          {user?.role === 'admin' && (
+            <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm">
+              <option value="">Todos os clientes</option>
+              {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          )}
+          <button onClick={exportPdf} className="flex items-center space-x-1 sm:space-x-2 bg-blue-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-blue-700 transition-all text-xs sm:text-sm">
+            <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Exportar PDF</span>
+            <span className="sm:hidden">PDF</span>
+          </button>
+          <button onClick={exportWhatsApp} className="flex items-center space-x-1 sm:space-x-2 bg-green-600 text-white px-2 sm:px-3 py-2 rounded-lg hover:bg-green-700 transition-all text-xs sm:text-sm">
+            <MessageCircle className="w-3 h-3 sm:w-4 sm:h-4" />
+            <span className="hidden sm:inline">Enviar WhatsApp</span>
+            <span className="sm:hidden">WhatsApp</span>
+          </button>
+        </div>
+      </div>
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -203,7 +204,7 @@ const StockManagement: React.FC = () => {
                 required
               >
                 <option value="">Selecione um item</option>
-                {linenItems.map((item) => (
+                {visibleItems.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.name} - {item.currentStock} {item.unit}
                   </option>
@@ -288,7 +289,7 @@ const StockManagement: React.FC = () => {
           <h3 className="text-lg font-semibold mb-4">Status do Estoque</h3>
           
           <div className="space-y-4 max-h-96 overflow-y-auto">
-            {linenItems.map((item) => (
+            {visibleItems.map((item) => (
               <div key={item.id} className="border border-gray-100 rounded-lg p-4">
                 <div className="flex items-center justify-between mb-2">
                   <h4 className="font-medium text-gray-900">{item.name}</h4>
