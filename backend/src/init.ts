@@ -103,6 +103,41 @@ async function ensureDatabase() {
       CONSTRAINT fk_stockmovement_item FOREIGN KEY (itemId) REFERENCES linenitem(id) ON DELETE CASCADE
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
+  // Weighing tables
+  await db.query(`CREATE TABLE IF NOT EXISTS cage (
+      id VARCHAR(191) PRIMARY KEY,
+      barcode VARCHAR(50) NOT NULL UNIQUE,
+      tareWeight DECIMAL(10,2) NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+  await db.query(`CREATE TABLE IF NOT EXISTS weighingcontrol (
+      id VARCHAR(191) PRIMARY KEY,
+      laundryGrossWeight DECIMAL(10,2) NOT NULL,
+      clientTotalNetWeight DECIMAL(10,2) NOT NULL DEFAULT 0,
+      differenceWeight DECIMAL(10,2) NOT NULL DEFAULT 0,
+      differencePercent DECIMAL(5,2) NOT NULL DEFAULT 0,
+      kind VARCHAR(16) NOT NULL DEFAULT 'limpa',
+      referenceDate DATE NOT NULL DEFAULT (CURRENT_DATE),
+      expectedDeliveryDate DATE NULL,
+      status VARCHAR(16) NOT NULL DEFAULT 'open',
+      closedAt DATETIME NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+  await db.query(`CREATE TABLE IF NOT EXISTS weighingentry (
+      id VARCHAR(191) PRIMARY KEY,
+      controlId VARCHAR(191) NOT NULL,
+      cageId VARCHAR(191) NULL,
+      tareWeight DECIMAL(10,2) NOT NULL,
+      totalWeight DECIMAL(10,2) NOT NULL,
+      netWeight DECIMAL(10,2) NOT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX (controlId), INDEX (cageId),
+      CONSTRAINT fk_weighingentry_control FOREIGN KEY (controlId) REFERENCES weighingcontrol(id) ON DELETE CASCADE,
+      CONSTRAINT fk_weighingentry_cage FOREIGN KEY (cageId) REFERENCES cage(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
   // Ensure missing columns for existing databases
   try {
     await db.query(`SELECT clientId FROM linenitem LIMIT 1;`);
@@ -117,6 +152,16 @@ async function ensureDatabase() {
     // If column is ENUM, convert to VARCHAR(32)
     await db.query(`ALTER TABLE \`order\` MODIFY COLUMN confirmationType VARCHAR(32) NULL`);
   } catch {}
+
+  // Ensure weighingcontrol has kind and referenceDate (backfill defaults)
+  try { await db.query(`SELECT kind FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN kind VARCHAR(16) NOT NULL DEFAULT 'limpa';`); } catch {} }
+  try { await db.query(`SELECT referenceDate FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN referenceDate DATE NOT NULL DEFAULT (CURRENT_DATE);`); } catch {} }
+  try { await db.query(`SELECT status FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN status VARCHAR(16) NOT NULL DEFAULT 'open';`); } catch {} }
+  try { await db.query(`SELECT closedAt FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN closedAt DATETIME NULL;`); } catch {} }
+  try { await db.query(`SELECT expectedDeliveryDate FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN expectedDeliveryDate DATE NULL;`); } catch {} }
+  // Add clientId columns and FKs if missing
+  try { await db.query(`SELECT clientId FROM stockmovement LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE stockmovement ADD COLUMN clientId VARCHAR(191) NULL;`); } catch {} }
+  try { await db.query(`SELECT clientId FROM weighingcontrol LIMIT 1;`); } catch { try { await db.query(`ALTER TABLE weighingcontrol ADD COLUMN clientId VARCHAR(191) NULL;`); } catch {} }
 
   // Ensure admin exists (bootstrap pattern similar à rota)
   const [rows] = await db.query<any[]>(`SELECT id FROM SystemUser WHERE role='admin' LIMIT 1;`);

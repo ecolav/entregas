@@ -99,6 +99,37 @@ export interface StockMovement {
   item?: LinenItem;
 }
 
+// Weighing (Pesagem)
+export interface Cage {
+  id: string;
+  barcode: string;
+  tareWeight: number; // kg
+  createdAt: string;
+}
+
+export interface WeighingEntry {
+  id: string;
+  controlId: string;
+  cageId?: string;
+  tareWeight: number; // kg
+  totalWeight: number; // kg
+  netWeight: number;   // kg
+  createdAt: string;
+  cage?: Cage;
+}
+
+export interface WeighingControl {
+  id: string;
+  laundryGrossWeight: number;   // peso_bruto_lavanderia
+  clientTotalNetWeight: number; // somatório líquidos
+  differenceWeight: number;     // diferença (kg)
+  differencePercent: number;    // diferença (%)
+  kind: 'suja' | 'limpa';
+  referenceDate: string;        // YYYY-MM-DD or ISO
+  createdAt: string;
+  entries?: WeighingEntry[];
+}
+
 export interface AuthContextType {
   user: User | null;
   login: (email: string, password: string) => Promise<boolean>;
@@ -116,6 +147,8 @@ export interface AppContextType {
   systemUsers: SystemUser[];
   isLoading: boolean;
   isInitialLoading: boolean;
+  adminClientIdFilter?: string | null;
+  setAdminClientIdFilter?: (id: string | null) => void;
   addSector: (sector: Omit<Sector, 'id' | 'createdAt'>) => void;
   updateSector: (id: string, sector: Partial<Sector>) => void;
   deleteSector: (id: string) => void;
@@ -127,6 +160,7 @@ export interface AppContextType {
   deleteLinenItem: (id: string) => void;
   addOrder: (order: Omit<Order, 'id' | 'createdAt' | 'updatedAt'>) => void;
   updateOrderStatus: (id: string, status: Order['status']) => void;
+  deleteOrder: (id: string) => void;
   addStockMovement: (movement: Omit<StockMovement, 'id' | 'createdAt'>) => void;
   getBedByToken: (token: string) => Bed | undefined;
   addClient: (client: Omit<Client, 'id' | 'createdAt'>) => void;

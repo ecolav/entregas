@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { Search, Filter, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react';
 import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
+import { formatDateTimeISOToBR } from '../../utils/date';
 
 const OrderManagement: React.FC = () => {
-  const { orders, updateOrderStatus, confirmOrderDelivery } = useApp();
+  const { orders, updateOrderStatus, deleteOrder, confirmOrderDelivery } = useApp();
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [selectedOrder, setSelectedOrder] = useState<null | import('../../types').Order>(null);
@@ -130,12 +131,12 @@ const OrderManagement: React.FC = () => {
                     
                     <div className="text-xs sm:text-sm text-gray-600 mb-3">
                       <p><span className="font-medium">Itens:</span> {order.items.map(item => `${item.quantity}x ${item.item?.name}`).join(', ')}</p>
-                      <p><span className="font-medium">Data:</span> {new Date(order.createdAt).toLocaleString('pt-BR')}</p>
+                      <p><span className="font-medium">Data:</span> {formatDateTimeISOToBR(order.createdAt)}</p>
                       {order.status === 'delivered' && order.receiverName && (
                         <p><span className="font-medium">Recebido por:</span> {order.receiverName}</p>
                       )}
                       {order.status === 'delivered' && order.deliveredAt && (
-                        <p><span className="font-medium">Entregue em:</span> {new Date(order.deliveredAt).toLocaleString('pt-BR')}</p>
+                        <p><span className="font-medium">Entregue em:</span> {formatDateTimeISOToBR(order.deliveredAt)}</p>
                       )}
                       {order.status === 'delivered' && order.confirmationUrl && (
                         <p className="mt-1">
@@ -144,17 +145,17 @@ const OrderManagement: React.FC = () => {
                             onClick={() => {
                               try {
                                 const url = order.confirmationUrl;
-                                // Verificar se a URL é válida
-                                if (url && url.startsWith('http')) {
+                                if (!url) return;
+                                // Se URL absoluta http(s), abre direto
+                                if (/^https?:\/\//i.test(url)) {
                                   window.open(url, '_blank', 'noopener,noreferrer');
-                                } else if (url) {
-                                  // Se não for uma URL completa, tentar construir uma
-                                  const baseUrl = window.location.origin.includes('localhost') 
-                                    ? 'http://localhost:4000' 
-                                    : window.location.origin;
-                                  const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
-                                  window.open(fullUrl, '_blank', 'noopener,noreferrer');
+                                  return;
                                 }
+                                // Caso contrário, construir com base adequada (produção proxied /uploads, dev :4000)
+                                const isLocal = window.location.origin.includes('localhost');
+                                const baseUrl = isLocal ? 'http://localhost:4000' : window.location.origin;
+                                const fullUrl = url.startsWith('/') ? `${baseUrl}${url}` : `${baseUrl}/${url}`;
+                                window.open(fullUrl, '_blank', 'noopener,noreferrer');
                               } catch (error) {
                                 console.error('Erro ao abrir comprovante:', error);
                                 alert('Erro ao abrir o comprovante. Tente novamente.');
@@ -170,7 +171,7 @@ const OrderManagement: React.FC = () => {
                         <p><span className="font-medium">Observações:</span> {order.observations}</p>
                       )}
                       {order.scheduledDelivery && (
-                        <p><span className="font-medium">Entrega agendada:</span> {new Date(order.scheduledDelivery).toLocaleString('pt-BR')}</p>
+                        <p><span className="font-medium">Entrega agendada:</span> {formatDateTimeISOToBR(order.scheduledDelivery)}</p>
                       )}
                     </div>
                   </div>
@@ -203,6 +204,17 @@ const OrderManagement: React.FC = () => {
                         )}
                       </button>
                     )}
+                    <button
+                      onClick={() => {
+                        if (confirm('Excluir este pedido? Esta ação não pode ser desfeita.')) {
+                          deleteOrder(order.id);
+                        }
+                      }}
+                      className="px-2 sm:px-3 py-1 text-xs sm:text-sm bg-red-600 hover:bg-red-700 text-white rounded"
+                      title="Excluir pedido"
+                    >
+                      Excluir
+                    </button>
                     
                     <select
                       value={order.status}
@@ -288,19 +300,19 @@ const OrderManagement: React.FC = () => {
                       {getStatusText(selectedOrder.status)}
                     </span>
                   </p>
-                  <p><span className="font-medium">Data do Pedido:</span> {new Date(selectedOrder.createdAt).toLocaleString('pt-BR')}</p>
-                  <p><span className="font-medium">Última Atualização:</span> {new Date(selectedOrder.updatedAt).toLocaleString('pt-BR')}</p>
+                  <p><span className="font-medium">Data do Pedido:</span> {formatDateTimeISOToBR(selectedOrder.createdAt)}</p>
+                  <p><span className="font-medium">Última Atualização:</span> {formatDateTimeISOToBR(selectedOrder.updatedAt)}</p>
                   {selectedOrder.observations && (
                     <p><span className="font-medium">Observações:</span> {selectedOrder.observations}</p>
                   )}
                   {selectedOrder.scheduledDelivery && (
-                    <p><span className="font-medium">Entrega Agendada:</span> {new Date(selectedOrder.scheduledDelivery).toLocaleString('pt-BR')}</p>
+                    <p><span className="font-medium">Entrega Agendada:</span> {formatDateTimeISOToBR(selectedOrder.scheduledDelivery)}</p>
                   )}
                   {selectedOrder.status === 'delivered' && selectedOrder.receiverName && (
                     <p><span className="font-medium">Recebido por:</span> {selectedOrder.receiverName}</p>
                   )}
                   {selectedOrder.status === 'delivered' && selectedOrder.deliveredAt && (
-                    <p><span className="font-medium">Entregue em:</span> {new Date(selectedOrder.deliveredAt).toLocaleString('pt-BR')}</p>
+                    <p><span className="font-medium">Entregue em:</span> {formatDateTimeISOToBR(selectedOrder.deliveredAt)}</p>
                   )}
                   {selectedOrder.status === 'delivered' && selectedOrder.confirmationUrl && (
                     <p>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import {
+import { 
   Home,
   Building,
   Bed,
@@ -7,6 +7,7 @@ import {
   ShoppingCart,
   BarChart3,
   Scale,
+  CalendarDays,
   TrendingUp,
   Briefcase,
   Users,
@@ -15,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'reports' | 'clients' | 'users';
+type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'reports' | 'clients' | 'users';
 
 interface MenuItem {
   id: ActiveSection;
@@ -48,6 +49,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       { id: 'orders', label: 'Pedidos', icon: <ShoppingCart className="w-5 h-5" /> },
       { id: 'stock', label: 'Estoque', icon: <BarChart3 className="w-5 h-5" /> },
       { id: 'weight', label: 'Pesagem', icon: <Scale className="w-5 h-5" /> },
+      { id: 'weight-tracking', label: 'Acompanhamento', icon: <CalendarDays className="w-5 h-5" /> },
       { id: 'reports', label: 'Relatórios', icon: <TrendingUp className="w-5 h-5" /> },
     ];
     if (user?.role === 'admin') {

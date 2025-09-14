@@ -20,6 +20,8 @@ model Client {
   sectors         Sector[]
   users           SystemUser[]
   linenItems      LinenItem[]
+  stockMovements  StockMovement[]
+  weighingControls WeighingControl[]
 }
 
 model Sector {
@@ -99,6 +101,8 @@ model StockMovement {
   orderId   String?
   reason    String
   createdAt DateTime @default(now())
+  clientId  String?
+  client    Client?  @relation(fields: [clientId], references: [id])
 }
 
 model SystemUser {
@@ -113,4 +117,48 @@ model SystemUser {
   client    Client?  @relation(fields: [clientId], references: [id])
 }
 
+
+// Laundry Weighing - Cages (Gaiolas)
+model Cage {
+  id         String   @id @default(cuid())
+  barcode    String   @unique
+  tareWeight Decimal  @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+
+  entries    WeighingEntry[]
+}
+
+// Laundry Weighing - Control header
+model WeighingControl {
+  id                   String   @id @default(cuid())
+  clientId             String?
+  client               Client?  @relation(fields: [clientId], references: [id])
+  laundryGrossWeight   Decimal  @db.Decimal(10, 2)
+  clientTotalNetWeight Decimal  @default(0) @db.Decimal(10, 2)
+  differenceWeight     Decimal  @default(0) @db.Decimal(10, 2)
+  differencePercent    Decimal  @default(0) @db.Decimal(5, 2)
+  kind                 String   @default("limpa") // 'suja' | 'limpa'
+  referenceDate        DateTime @default(now())   // data de referência (dia)
+  expectedDeliveryDate DateTime?                  // suja: data prevista de entrega
+  status               String   @default("open")  // 'open' | 'closed'
+  closedAt             DateTime?
+  createdAt            DateTime @default(now())
+
+  entries              WeighingEntry[]
+}
+
+// Laundry Weighing - Individual entries
+model WeighingEntry {
+  id          String   @id @default(cuid())
+  controlId   String
+  control     WeighingControl @relation(fields: [controlId], references: [id])
+
+  cageId      String?
+  cage        Cage?    @relation(fields: [cageId], references: [id])
+
+  tareWeight  Decimal  @db.Decimal(10, 2)
+  totalWeight Decimal  @db.Decimal(10, 2)
+  netWeight   Decimal  @db.Decimal(10, 2)
+  createdAt   DateTime @default(now())
+}
 

@@ -11,7 +11,8 @@ export function getApiBaseUrl(): string {
     if (origin.includes(':5173')) {
       return origin.replace(':5173', ':4000');
     }
-    return origin;
+    // Produção: usar prefixo /api via Nginx
+    return `${origin}/api`;
   }
 
   return 'http://localhost:4000';

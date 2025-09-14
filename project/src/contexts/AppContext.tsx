@@ -23,6 +23,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [lastRefresh, setLastRefresh] = useState<number>(0);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
+  const [adminClientIdFilter, setAdminClientIdFilter] = useState<string | null>(null);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
   const getBaseUrl = () => getApiBaseUrl();
 
@@ -36,13 +37,14 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const authHeaders = { Authorization: `Bearer ${token}` } as const;
 
     try {
+      const qs = (user?.role === 'admin' && adminClientIdFilter) ? `?clientId=${encodeURIComponent(adminClientIdFilter)}` : '';
       const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
         fetch(`${baseUrl}/clients`, { headers: authHeaders }),
-        fetch(`${baseUrl}/sectors`, { headers: authHeaders }),
-        fetch(`${baseUrl}/beds`, { headers: authHeaders }),
-        fetch(`${baseUrl}/items`, { headers: authHeaders }),
-        fetch(`${baseUrl}/orders`, { headers: authHeaders }),
-        fetch(`${baseUrl}/stock-movements`, { headers: authHeaders }),
+        fetch(`${baseUrl}/sectors${qs}`, { headers: authHeaders }),
+        fetch(`${baseUrl}/beds${qs}`, { headers: authHeaders }),
+        fetch(`${baseUrl}/items${qs}`, { headers: authHeaders }),
+        fetch(`${baseUrl}/orders${qs}`, { headers: authHeaders }),
+        fetch(`${baseUrl}/stock-movements${qs}`, { headers: authHeaders }),
         fetch(`${baseUrl}/users`, { headers: authHeaders }),
       ]);
 
@@ -74,7 +76,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setIsLoading(false);
       setIsInitialLoading(false);
     }
-  }, [user?.id, addToast]);
+  }, [user?.id, user?.role, adminClientIdFilter, addToast]);
 
   const refreshAll = useCallback(async () => {
     await loadData();
@@ -373,6 +375,23 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     })();
   };
 
+  const deleteOrder = (id: string) => {
+    const baseUrl = getBaseUrl();
+    if (!baseUrl) {
+      setOrders(prev => prev.filter(o => o.id !== id));
+      return;
+    }
+    (async () => {
+      const token = localStorage.getItem('token');
+      const res = await fetch(`${baseUrl}/orders/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
+      if (res.ok) {
+        await refreshAll();
+        notify('orders-changed');
+        addToast({ type: 'success', message: 'Pedido excluído com sucesso' });
+      }
+    })();
+  };
+
   const updateOrderStatus = (id: string, status: Order['status']) => {
     const baseUrl = getBaseUrl();
     if (!baseUrl) {
@@ -382,13 +401,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     (async () => {
       const token = localStorage.getItem('token');
       const res = await fetch(`${baseUrl}/orders/${id}/status`, { method: 'PUT', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify({ status }) });
-             if (res.ok) {
+      if (res.ok) {
          await res.json();
          // Atualização imediata para tempo real
-         await refreshAll();
-         notify('orders-changed');
+        await refreshAll();
+        notify('orders-changed');
          addToast({ type: 'success', message: 'Status do pedido atualizado com sucesso' });
-       }
+      }
     })();
   };
 
@@ -468,9 +487,9 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       notify('orders-changed');
       
       addToast({ type: 'success', message: 'Entrega confirmada com sucesso' });
-         } catch {
-       addToast({ type: 'error', message: 'Erro de rede na confirmação' });
-     }
+    } catch {
+      addToast({ type: 'error', message: 'Erro de rede na confirmação' });
+    }
   };
 
   // Clients CRUD (API-aware)
@@ -555,13 +574,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
           body: JSON.stringify(user)
         });
-              if (res.ok) {
-        const created = await res.json();
-        setSystemUsers(prev => [...prev, created]);
+        if (res.ok) {
+          const created = await res.json();
+          setSystemUsers(prev => [...prev, created]);
         // Atualização imediata para tempo real
         await refreshAll();
         addToast({ type: 'success', message: 'Usuário criado com sucesso' });
-      } else {
+        } else {
           let message = 'Falha ao criar usuário';
           try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
           addToast({ type: 'error', message });
@@ -583,13 +602,13 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
           body: JSON.stringify(user)
         });
-              if (res.ok) {
-        const updated = await res.json();
-        setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
+        if (res.ok) {
+          const updated = await res.json();
+          setSystemUsers(prev => prev.map(u => (u.id === id ? updated : u)));
         // Atualização imediata para tempo real
         await refreshAll();
         addToast({ type: 'success', message: 'Usuário atualizado com sucesso' });
-      } else {
+        } else {
           let message = 'Falha ao atualizar usuário';
           try { const j = await res.json(); message = j?.error || message; } catch { /* ignore */ }
           addToast({ type: 'error', message });
@@ -631,6 +650,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       systemUsers,
       isLoading,
       isInitialLoading,
+      adminClientIdFilter,
+      setAdminClientIdFilter,
       addSector,
       updateSector,
       deleteSector,
@@ -642,6 +663,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       deleteLinenItem,
       addOrder,
       updateOrderStatus,
+      deleteOrder,
       addStockMovement,
       getBedByToken,
       confirmOrderDelivery,

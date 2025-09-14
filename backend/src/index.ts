@@ -334,6 +334,261 @@ app.delete('/users/:id', requireAuth(['admin']), async (req, res, next) => {
   } catch (e) { next(e); }
 });
 
+// ==============================
+// Weighing: Cages (Gaiolas)
+// ==============================
+const cageSchema = z.object({
+  codigo_barras: z.string().min(1),
+  peso_tara: z.number().nonnegative()
+});
+
+app.get('/gaiolas', requireAuth(['admin','manager']), async (_req, res, next) => {
+  try {
+    const data = await prisma.cage.findMany({ orderBy: { createdAt: 'desc' } });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/gaiolas', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const parsed = cageSchema.parse(req.body);
+    const created = await prisma.cage.create({ data: { barcode: parsed.codigo_barras, tareWeight: String(parsed.peso_tara) } as any });
+    res.status(201).json(created);
+  } catch (e: any) {
+    if (e?.code === 'P2002') {
+      return res.status(409).json({ error: 'DuplicateBarcode' });
+    }
+    next(e);
+  }
+});
+
+app.put('/gaiolas/:id', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const parsed = cageSchema.partial().parse(req.body);
+    const data: any = {};
+    if (parsed.codigo_barras !== undefined) data.barcode = parsed.codigo_barras;
+    if (parsed.peso_tara !== undefined) data.tareWeight = String(parsed.peso_tara);
+    const updated = await prisma.cage.update({ where: { id: req.params.id }, data });
+    res.json(updated);
+  } catch (e: any) {
+    if (e?.code === 'P2002') {
+      return res.status(409).json({ error: 'DuplicateBarcode' });
+    }
+    next(e);
+  }
+});
+
+app.delete('/gaiolas/:id', requireAuth(['admin']), async (req, res, next) => {
+  try {
+    await prisma.cage.delete({ where: { id: req.params.id } });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
+// ==============================
+// Weighing: Control and Entries
+// ==============================
+const controlCreateSchema = z.object({
+  peso_bruto_lavanderia: z.number().nonnegative().optional(),
+  tipo: z.enum(['suja','limpa']).default('limpa').optional(),
+  data: z.string().optional(), // YYYY-MM-DD
+  prevista: z.string().optional(), // YYYY-MM-DD (apenas para suja)
+  clientId: z.string().optional()
+});
+
+app.post('/controles', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const parsed = controlCreateSchema.parse(req.body);
+    const tipo = parsed.tipo ?? 'limpa';
+    let gross = parsed.peso_bruto_lavanderia;
+    if (tipo === 'limpa') {
+      if (gross === undefined || Number(gross) <= 0) return res.status(400).json({ error: 'Missing gross weight for clean control' });
+    } else {
+      gross = 0; // será apurado pelas entradas
+    }
+
+    const isAdmin = (req as any).user?.role === 'admin';
+    const clientIdForControl = isAdmin && parsed.clientId ? parsed.clientId : ((req as any).user?.clientId ?? null);
+
+    const created = await prisma.weighingControl.create({
+      data: {
+        laundryGrossWeight: String(gross ?? 0),
+        clientTotalNetWeight: '0',
+        differenceWeight: '0',
+        differencePercent: '0',
+        kind: tipo,
+        clientId: clientIdForControl,
+        referenceDate: parsed.data && /^\d{4}-\d{2}-\d{2}$/.test(parsed.data) ? new Date(`${parsed.data}T00:00:00Z`) : new Date(),
+        expectedDeliveryDate: (tipo === 'suja' && parsed.prevista && /^\d{4}-\d{2}-\d{2}$/.test(parsed.prevista)) ? new Date(`${parsed.prevista}T00:00:00Z`) : null
+      } as any
+    });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+async function recalcControl(controlId: string) {
+  const control = await prisma.weighingControl.findUnique({ where: { id: controlId } });
+  if (!control) return null;
+  const agg = await prisma.weighingEntry.aggregate({ _sum: { netWeight: true }, where: { controlId } });
+  const totalNet = Number(agg._sum.netWeight || 0);
+  const gross = Number(control.laundryGrossWeight as any);
+  const diff = Number((gross - totalNet).toFixed(2));
+  const percent = gross > 0 ? Number(((Math.abs(diff) / gross) * 100).toFixed(2)) : 0;
+  const updated = await prisma.weighingControl.update({
+    where: { id: controlId },
+    data: {
+      clientTotalNetWeight: String(totalNet),
+      differenceWeight: String(diff),
+      differencePercent: String(percent)
+    } as any
+  });
+  return updated;
+}
+
+app.get('/controles/:id', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const data = await prisma.weighingControl.findUnique({
+      where: { id: req.params.id },
+      include: { entries: { include: { cage: true }, orderBy: { createdAt: 'desc' } } }
+    } as any);
+    if (!data) return res.status(404).json({ error: 'NotFound' });
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+const weighingEntrySchema = z.object({
+  control_id: z.string().min(1),
+  cage_id: z.string().min(1).optional(),
+  peso_tara: z.number().nonnegative().optional(),
+  peso_total: z.number().nonnegative()
+});
+
+app.post('/pesagens', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const parsed = weighingEntrySchema.parse(req.body);
+    const control = await prisma.weighingControl.findUnique({ where: { id: parsed.control_id } });
+    if (!control) return res.status(400).json({ error: 'Invalid control_id' });
+
+    let tare = 0;
+    let cageId: string | null = null;
+    if (parsed.cage_id) {
+      const cage = await prisma.cage.findUnique({ where: { id: parsed.cage_id } });
+      if (!cage) return res.status(400).json({ error: 'Invalid cage_id' });
+      cageId = cage.id;
+      tare = Number(cage.tareWeight as any);
+    } else if (parsed.peso_tara !== undefined) {
+      tare = parsed.peso_tara;
+    } else {
+      return res.status(400).json({ error: 'Provide cage_id or peso_tara' });
+    }
+
+    const total = parsed.peso_total;
+    const net = Math.max(0, Number((total - tare).toFixed(2)));
+    const created = await prisma.weighingEntry.create({
+      data: {
+        controlId: parsed.control_id,
+        cageId,
+        tareWeight: String(tare),
+        totalWeight: String(total),
+        netWeight: String(net)
+      } as any
+    });
+
+    const updatedControl = await recalcControl(parsed.control_id);
+    const full = await prisma.weighingControl.findUnique({
+      where: { id: parsed.control_id },
+      include: { entries: { include: { cage: true }, orderBy: { createdAt: 'desc' } } }
+    } as any);
+    res.status(201).json({ entry: created, control: updatedControl, full });
+  } catch (e) { next(e); }
+});
+
+// Finalize a control
+app.put('/controles/:id/finalizar', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const existing = await prisma.weighingControl.findUnique({ where: { id: req.params.id } });
+    if (!existing) return res.status(404).json({ error: 'NotFound' });
+    // recalc before closing
+    await recalcControl(existing.id);
+    const updated = await prisma.weighingControl.update({ where: { id: existing.id }, data: { status: 'closed', closedAt: new Date() } as any });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
+
+// Daily report: aggregates per day and kind (suja/limpa)
+app.get('/pesagens/relatorio', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const start = String(req.query.start || '').trim();
+    const end = String(req.query.end || '').trim();
+    const where: any = {};
+    if (/^\d{4}-\d{2}-\d{2}$/.test(start)) where.referenceDate = Object.assign(where.referenceDate || {}, { gte: new Date(`${start}T00:00:00Z`) });
+    if (/^\d{4}-\d{2}-\d{2}$/.test(end)) where.referenceDate = Object.assign(where.referenceDate || {}, { lte: new Date(`${end}T23:59:59Z`) });
+
+    // Role-aware filter by client
+    if ((req as any).user?.role === 'manager' && (req as any).user?.clientId) {
+      (where as any).clientId = (req as any).user.clientId;
+    } else if (req.query.clientId) {
+      (where as any).clientId = String(req.query.clientId);
+    }
+    const controls = await prisma.weighingControl.findMany({ where, select: { id: true, referenceDate: true, expectedDeliveryDate: true, kind: true, clientTotalNetWeight: true } });
+    // Aggregate by day (clean at referenceDate, dirty at expectedDeliveryDate)
+    const map = new Map<string, { date: string; suja: number; limpa: number }>();
+    for (const c of controls) {
+      const totalNet = Number(c.clientTotalNetWeight as any) || 0;
+      if (c.kind === 'suja') {
+        const d = (c.expectedDeliveryDate ?? c.referenceDate) as any;
+        const date = new Date(d).toISOString().split('T')[0];
+        if (!map.has(date)) map.set(date, { date, suja: 0, limpa: 0 });
+        map.get(date)!.suja += totalNet;
+      } else {
+        const date = new Date(c.referenceDate as any).toISOString().split('T')[0];
+        if (!map.has(date)) map.set(date, { date, suja: 0, limpa: 0 });
+        map.get(date)!.limpa += totalNet;
+      }
+    }
+    const result = Array.from(map.values()).sort((a, b) => a.date.localeCompare(b.date)).map(r => {
+      const suja = r.suja;
+      const limpa = r.limpa;
+      const diff = suja - limpa;
+      const perc = suja > 0 ? Number(((diff / suja) * 100).toFixed(2)) : 0;
+      return { date: r.date, peso_suja: Number(suja.toFixed(2)), peso_limpa: Number(limpa.toFixed(2)), diferenca: Number(diff.toFixed(2)), sujidade_percentual: perc };
+    });
+    res.json(result);
+  } catch (e) { next(e); }
+});
+
+// List entries for a given date (YYYY-MM-DD)
+app.get('/pesagens/por-dia', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const date = String(req.query.date || '').trim();
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return res.status(400).json({ error: 'Invalid date' });
+    const start = new Date(`${date}T00:00:00Z`);
+    const end = new Date(`${date}T23:59:59Z`);
+    const whereCtrl: any = { referenceDate: { gte: start, lte: end } };
+    if ((req as any).user?.role === 'manager' && (req as any).user?.clientId) whereCtrl.clientId = (req as any).user.clientId;
+    else if (req.query.clientId) whereCtrl.clientId = String(req.query.clientId);
+    const controls = await prisma.weighingControl.findMany({ where: whereCtrl, select: { id: true, kind: true } });
+    const controlIds = controls.map(c => c.id);
+    if (controlIds.length === 0) return res.json({ entries: [] });
+    const entries = (await prisma.weighingEntry.findMany({ where: { controlId: { in: controlIds } }, include: { cage: true } as any, orderBy: { createdAt: 'desc' } })) as any[];
+    const kindById = new Map<string, 'suja' | 'limpa'>(controls.map(c => [c.id, (c.kind as any) || 'limpa']));
+    const response = entries.map((e: any) => ({ id: e.id, controlId: e.controlId, kind: (kindById.get(e.controlId) as any) || 'limpa', tareWeight: e.tareWeight, totalWeight: e.totalWeight, netWeight: e.netWeight, createdAt: e.createdAt, cage: e.cage ? { id: e.cage.id, barcode: e.cage.barcode } : null }));
+    res.json({ entries: response });
+  } catch (e) { next(e); }
+});
+
+// Delete an entry
+app.delete('/pesagens/:id', requireAuth(['admin','manager']), async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    const existing = await prisma.weighingEntry.findUnique({ where: { id } });
+    if (!existing) return res.status(404).json({ error: 'NotFound' });
+    await prisma.weighingEntry.delete({ where: { id } });
+    await recalcControl(existing.controlId);
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
 // Sectors CRUD
 const sectorSchema = z.object({
   name: z.string().min(1),
@@ -343,7 +598,12 @@ const sectorSchema = z.object({
 
 app.get('/sectors', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
-    const where = req.user.role === 'manager' && req.user.clientId ? { clientId: req.user.clientId as string } : {};
+    let where: any = {};
+    if (req.user.role === 'manager' && req.user.clientId) {
+      where = { clientId: req.user.clientId as string };
+    } else if (req.query.clientId) {
+      where = { clientId: String(req.query.clientId) };
+    }
     const data = await prisma.sector.findMany({ where, include: { client: true } });
     res.json(data);
   } catch (e) { next(e); }
@@ -404,9 +664,15 @@ app.get('/beds', requireAuth(['admin','manager']), async (req: any, _res, next) 
   } catch (e) { next(e); }
 });
 
-app.get('/beds', async (_req, res, next) => {
+app.get('/beds', async (req: any, res, next) => {
   try {
-    const data = await prisma.bed.findMany({ include: { sector: true } });
+    let where: any = {};
+    if (req.user?.role === 'manager' && req.user?.clientId) {
+      where = { sector: { clientId: req.user.clientId } };
+    } else if (req.query.clientId) {
+      where = { sector: { clientId: String(req.query.clientId) } };
+    }
+    const data = await prisma.bed.findMany({ where, include: { sector: true } } as any);
     res.json(data);
   } catch (e) { next(e); }
 });
@@ -457,10 +723,10 @@ const itemSchema = z.object({ name: z.string().min(1), sku: z.string().min(1), u
 app.get('/items', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
     let where: any = {};
-    if (req.user.role === 'manager') {
-      where = { OR: [{ clientId: null }, { clientId: req.user.clientId ?? undefined }] };
+    if (req.user.role === 'manager' && req.user.clientId) {
+      where = { clientId: req.user.clientId };
     } else if (req.query.clientId) {
-      where = { OR: [{ clientId: null }, { clientId: String(req.query.clientId) }] };
+      where = { clientId: String(req.query.clientId) };
     }
     const data = await prisma.linenItem.findMany({ where } as any);
     res.json(data);
@@ -531,6 +797,13 @@ app.get('/orders', requireAuth(['admin','manager']), async (req: any, res, next)
       const beds = await prisma.bed.findMany({ where: { sectorId: { in: sectorIds } }, select: { id: true } });
       const bedIds = beds.map(b => b.id);
       where.bedId = { in: bedIds };
+    } else if (req.query.clientId) {
+      const clientId = String(req.query.clientId);
+      const sectors = await prisma.sector.findMany({ where: { clientId }, select: { id: true } });
+      const sectorIds = sectors.map(s => s.id);
+      const beds = await prisma.bed.findMany({ where: { sectorId: { in: sectorIds } }, select: { id: true } });
+      const bedIds = beds.map(b => b.id);
+      where.bedId = { in: bedIds };
     }
     const data = await prisma.order.findMany({ where, include: { items: { include: { item: true } }, bed: { include: { sector: true } } } });
     res.json(data);
@@ -572,12 +845,35 @@ app.put('/orders/:id/status', requireAuth(['admin','manager']), async (req: any,
   } catch (e) { next(e); }
 });
 
+// Delete order (admin only)
+app.delete('/orders/:id', requireAuth(['admin']), async (req, res, next) => {
+  try {
+    const id = req.params.id;
+    await prisma.$transaction(async (tx) => {
+      const order = await tx.order.findUnique({ where: { id }, include: { items: true } });
+      if (!order) return;
+      for (const it of order.items) {
+        const item = await tx.linenItem.findUnique({ where: { id: it.itemId } });
+        if (item) {
+          await tx.linenItem.update({ where: { id: item.id }, data: { currentStock: item.currentStock + it.quantity } });
+          await tx.stockMovement.create({ data: { itemId: item.id, type: 'in', quantity: it.quantity, reason: `Rollback pedido ${id}`, orderId: id, clientId: (item as any).clientId ?? null } as any });
+        }
+      }
+      await tx.order.delete({ where: { id } });
+    });
+    res.status(204).end();
+  } catch (e) { next(e); }
+});
+
 // Stock movements
 const movementSchema = z.object({ itemId: z.string().min(1), type: z.enum(['in','out']), quantity: z.number().int().positive(), reason: z.string().min(1), orderId: z.string().optional().nullable() });
 
 app.get('/stock-movements', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
-    const data = await prisma.stockMovement.findMany({ include: { item: true } });
+    let where: any = {};
+    if (req.user.role === 'manager' && req.user.clientId) where = { clientId: req.user.clientId };
+    else if (req.query.clientId) where = { clientId: String(req.query.clientId) };
+    const data = await prisma.stockMovement.findMany({ where, include: { item: true } } as any);
     res.json(data);
   } catch (e) { next(e); }
 });
@@ -591,6 +887,8 @@ app.post('/stock-movements', requireAuth(['admin']), async (req, res, next) => {
       if (item) {
         const newStock = parsed.type === 'in' ? item.currentStock + parsed.quantity : Math.max(0, item.currentStock - parsed.quantity);
         await tx.linenItem.update({ where: { id: item.id }, data: { currentStock: newStock } });
+        // stamp clientId on movement
+        await tx.stockMovement.update({ where: { id: created.id }, data: { clientId: (item as any).clientId ?? null } as any });
       }
       return created;
     });

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Menu, LogOut, User } from 'lucide-react';
 // Logo principal (ECOLAV) em páginas autenticadas
 import { User as UserType } from '../../types';
+import { useApp } from '../../contexts/AppContext';
 
 interface DashboardHeaderProps {
   user: UserType | null;
@@ -11,6 +12,9 @@ interface DashboardHeaderProps {
 
 const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) => {
   const { logout } = useAuth();
+  const { clients, adminClientIdFilter, setAdminClientIdFilter } = useApp();
+  const isAdmin = user?.role === 'admin';
+  const sortedClients = useMemo(() => clients.slice().sort((a,b)=>a.name.localeCompare(b.name)), [clients]);
 
   return (
     <header className="bg-white border-b border-gray-200 px-4 py-3">
@@ -35,6 +39,19 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) 
         </div>
 
         <div className="flex items-center space-x-4">
+          {isAdmin && setAdminClientIdFilter && (
+            <select
+              value={adminClientIdFilter ?? ''}
+              onChange={(e)=>setAdminClientIdFilter(e.target.value || null)}
+              className="px-3 py-2 border rounded-lg text-sm hidden md:block"
+              title="Filtrar por cliente"
+            >
+              <option value="">Todos os clientes</option>
+              {sortedClients.map(c => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          )}
           {user && (
             <div className="flex items-center space-x-3">
               <div className="hidden sm:block text-right">
