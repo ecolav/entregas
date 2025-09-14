@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useToast } from '../../contexts/ToastContext';
-import { Scale, Package, CheckCircle, AlertTriangle, Plus, Trash2, Edit } from 'lucide-react';
+import { Scale, Plus, Trash2, Edit } from 'lucide-react';
 import { getApiBaseUrl } from '../../config';
 import { Cage, WeighingControl, WeighingEntry } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
@@ -38,33 +38,32 @@ const WeightManagement: React.FC = () => {
 
   const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
-  const fetchCages = async () => {
+  const fetchCages = React.useCallback(async () => {
     try {
-      const res = await fetch(`${api}/gaiolas`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${api}/gaiolas`, { headers: { Authorization: `Bearer ${token}` } as HeadersInit });
       if (res.ok) {
-        const data = await res.json();
-        // normalize decimals
-        const mapped: Cage[] = data.map((c: any) => ({ id: c.id, barcode: c.barcode, tareWeight: Number(c.tareWeight), createdAt: c.createdAt }));
+        const data = (await res.json()) as Array<{ id: string; barcode: string; tareWeight: string | number; createdAt: string }>;
+        const mapped: Cage[] = data.map((c) => ({ id: c.id, barcode: c.barcode, tareWeight: Number(c.tareWeight), createdAt: c.createdAt }));
         setCages(mapped);
       }
-    } catch {}
-  };
+    } catch (_err) { /* no-op */ }
+  }, [api, token]);
 
   const openNewCage = () => { setEditingCage(null); setCageForm({ barcode: '', tareWeight: '' }); setIsCageModalOpen(true); };
-  const submitCage = async (e: React.FormEvent) => {
+  const submitCage = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       const payload = { codigo_barras: cageForm.barcode.trim(), peso_tara: Number(cageForm.tareWeight) };
       const url = editingCage ? `${api}/gaiolas/${editingCage.id}` : `${api}/gaiolas`;
-      const method = editingCage ? 'PUT' : 'POST';
-      const res = await fetch(url, { method, headers: authHeaders as any, body: JSON.stringify(payload) });
+      const method: 'PUT' | 'POST' = editingCage ? 'PUT' : 'POST';
+      const res = await fetch(url, { method, headers: authHeaders as HeadersInit, body: JSON.stringify(payload) });
       if (res.status === 409) { addToast({ type: 'error', message: 'Código de barras já cadastrado.' }); return; }
       if (res.ok) {
         setIsCageModalOpen(false);
         await fetchCages();
         addToast({ type: 'success', message: editingCage ? 'Gaiola atualizada!' : 'Gaiola cadastrada!' });
       }
-    } catch {}
+    } catch (_err) { /* no-op */ }
   };
   const deleteCage = async (id: string) => {
     if (!confirm('Excluir esta gaiola?')) return;
@@ -84,7 +83,9 @@ const WeightManagement: React.FC = () => {
     if (user?.role === 'admin' && adminClientIdFilter) (payload as any).clientId = adminClientIdFilter;
     const res = await fetch(`${api}/controles`, { method: 'POST', headers: authHeaders as any, body: JSON.stringify(payload) });
     if (res.ok) {
-      const c = await res.json();
+      const c = (await res.json()) as {
+        id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; kind: 'suja'|'limpa'; referenceDate: string; createdAt: string;
+      };
       const normalized: WeighingControl = {
         id: c.id,
         laundryGrossWeight: Number(c.laundryGrossWeight),
@@ -106,7 +107,9 @@ const WeightManagement: React.FC = () => {
   const refreshControl = async (id: string) => {
     const res = await fetch(`${api}/controles/${id}`, { headers: { Authorization: `Bearer ${token}` } });
     if (res.ok) {
-      const data = await res.json();
+      const data = (await res.json()) as {
+        id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; createdAt: string; entries: Array<any>;
+      };
       const normalized: WeighingControl = {
         id: data.id,
         laundryGrossWeight: Number(data.laundryGrossWeight),
@@ -116,15 +119,15 @@ const WeightManagement: React.FC = () => {
         createdAt: data.createdAt,
       };
       setCurrentControl(normalized);
-      const mapped: WeighingEntry[] = (data.entries || []).map((e: any) => ({
-        id: e.id,
-        controlId: e.controlId,
-        cageId: e.cageId || undefined,
+      const mapped: WeighingEntry[] = (data.entries || []).map((e: Record<string, unknown>) => ({
+        id: String(e.id),
+        controlId: String(e.controlId),
+        cageId: (e.cageId as string) || undefined,
         tareWeight: Number(e.tareWeight),
         totalWeight: Number(e.totalWeight),
         netWeight: Number(e.netWeight),
-        createdAt: e.createdAt,
-        cage: e.cage ? { id: e.cage.id, barcode: e.cage.barcode, tareWeight: Number(e.cage.tareWeight), createdAt: e.cage.createdAt } : undefined
+        createdAt: String(e.createdAt),
+        cage: (e as any).cage ? { id: (e as any).cage.id as string, barcode: (e as any).cage.barcode as string, tareWeight: Number((e as any).cage.tareWeight), createdAt: (e as any).cage.createdAt as string } : undefined
       }));
       setEntries(mapped);
     }
@@ -136,7 +139,7 @@ const WeightManagement: React.FC = () => {
     const body: any = { control_id: currentControl.id, peso_total: Number(entryForm.total) };
     if (entryForm.cageIdOrManual === 'cage') body.cage_id = entryForm.cageId;
     else body.peso_tara = Number(entryForm.tare || 0);
-    const res = await fetch(`${api}/pesagens`, { method: 'POST', headers: authHeaders as any, body: JSON.stringify(body) });
+    const res = await fetch(`${api}/pesagens`, { method: 'POST', headers: authHeaders as HeadersInit, body: JSON.stringify(body) });
     if (res.ok) {
       await refreshControl(currentControl.id);
       setEntryForm({ cageIdOrManual: 'cage', cageId: undefined, tare: '', total: '' });
@@ -144,7 +147,7 @@ const WeightManagement: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchCages(); }, []);
+  useEffect(() => { fetchCages(); }, [fetchCages]);
 
   const pctStatus = (pct: number) => {
     if (pct <= 5) return { text: 'Dentro do padrão', cls: 'text-green-600 bg-green-100' };

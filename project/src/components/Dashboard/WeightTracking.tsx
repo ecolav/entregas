@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { getApiBaseUrl } from '../../config';
-import { BarChart3, Calendar } from 'lucide-react';
+import { Calendar } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useApp } from '../../contexts/AppContext';
 
@@ -40,7 +40,7 @@ const WeightTracking: React.FC = () => {
     }
   };
 
-  useEffect(() => { fetchData(); }, [month, adminClientIdFilter, user?.role]);
+  useEffect(() => { fetchData(); }, [month, adminClientIdFilter, user?.role, fetchData]);
 
   const openDay = async (date: string) => {
     setSelectedDay(date);
