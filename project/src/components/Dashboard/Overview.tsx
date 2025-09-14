@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import {
   Users,
@@ -10,9 +10,15 @@ import {
   Calendar,
   Clock
 } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { getApiBaseUrl } from '../../config';
+import { SkeletonCard } from '../Skeleton';
 
 const Overview: React.FC = () => {
-  const { sectors, beds, linenItems, orders } = useApp();
+  const { sectors, beds, linenItems, orders, adminClientIdFilter } = useApp();
+  const { user } = useAuth();
+  const api = getApiBaseUrl();
+  const token = useMemo(() => localStorage.getItem('token') || '', []);
 
   const occupiedBeds = beds.filter(bed => bed.status === 'occupied').length;
   const pendingOrders = orders.filter(order => order.status === 'pending').length;
@@ -51,6 +57,41 @@ const Overview: React.FC = () => {
   ];
 
   const recentOrders = orders.slice(0, 5);
+
+  // Monthly weights for dashboard quick cards
+  const [loadingWeights, setLoadingWeights] = useState(false);
+  const [weights, setWeights] = useState<{ suja: number; limpa: number; diff: number; perc: number }>({ suja: 0, limpa: 0, diff: 0, perc: 0 });
+  const monthRange = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = d.getMonth() + 1;
+    const start = `${y}-${String(m).padStart(2, '0')}-01`;
+    const end = `${y}-${String(m).padStart(2, '0')}-${String(new Date(y, m, 0).getDate()).padStart(2, '0')}`;
+    return { start, end };
+  }, []);
+
+  const fetchMonthlyWeights = useCallback(async () => {
+    setLoadingWeights(true);
+    try {
+      const url = new URL(`${api}/pesagens/relatorio`);
+      url.searchParams.set('start', monthRange.start);
+      url.searchParams.set('end', monthRange.end);
+      if (user?.role === 'admin' && adminClientIdFilter) url.searchParams.set('clientId', adminClientIdFilter);
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const rows: Array<{ peso_suja: number; peso_limpa: number }> = await res.json();
+        const suja = rows.reduce((s, r) => s + (Number(r.peso_suja) || 0), 0);
+        const limpa = rows.reduce((s, r) => s + (Number(r.peso_limpa) || 0), 0);
+        const diff = suja - limpa;
+        const perc = suja > 0 ? Number(((diff / suja) * 100).toFixed(2)) : 0;
+        setWeights({ suja: Number(suja.toFixed(2)), limpa: Number(limpa.toFixed(2)), diff: Number(diff.toFixed(2)), perc });
+      }
+    } finally {
+      setLoadingWeights(false);
+    }
+  }, [api, monthRange.end, monthRange.start, adminClientIdFilter, token, user?.role]);
+
+  useEffect(() => { fetchMonthlyWeights(); }, [fetchMonthlyWeights]);
 
   return (
     <div className="space-y-8">
@@ -169,25 +210,44 @@ const Overview: React.FC = () => {
         </div>
       </div>
 
-      {/* Quick Actions */}
+      {/* Pesagem - KPIs Rápidos (mês atual) */}
       <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border border-gray-100">
-        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Ações Rápidas</h3>
-        
+        <h3 className="text-base sm:text-lg font-semibold text-gray-900 mb-3 sm:mb-4">Resumo de Pesagem (mês)</h3>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
-            <Package className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Adicionar Item de Enxoval</p>
-          </div>
-          
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer">
-            <Bed className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Cadastrar Novo Leito</p>
-          </div>
-          
-          <div className="p-3 sm:p-4 border-2 border-dashed border-gray-200 rounded-lg text-center hover:border-blue-300 transition-colors cursor-pointer sm:col-span-2 lg:col-span-1">
-            <TrendingUp className="w-6 h-6 sm:w-8 sm:h-8 mx-auto mb-2 text-gray-400" />
-            <p className="text-xs sm:text-sm font-medium text-gray-700">Ver Relatórios</p>
-          </div>
+          {loadingWeights ? (
+            <>
+              <SkeletonCard />
+              <SkeletonCard />
+              <SkeletonCard />
+            </>
+          ) : (
+            <>
+              <div className="p-3 sm:p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Coletado (suja)</p>
+                  <Package className="w-5 h-5 text-blue-500" />
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900">{weights.suja} kg</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">{monthRange.start} a {monthRange.end}</p>
+              </div>
+              <div className="p-3 sm:p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Entregue (limpa)</p>
+                  <Bed className="w-5 h-5 text-green-600" />
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900">{weights.limpa} kg</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">{monthRange.start} a {monthRange.end}</p>
+              </div>
+              <div className="p-3 sm:p-4 border rounded-lg">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs sm:text-sm text-gray-600">Retenção</p>
+                  <TrendingUp className="w-5 h-5 text-orange-600" />
+                </div>
+                <p className="text-lg sm:text-2xl font-bold text-gray-900">{weights.diff} kg</p>
+                <p className="text-[11px] sm:text-xs text-gray-500">{weights.perc}% não retornou</p>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
