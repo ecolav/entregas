@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'reports' | 'clients' | 'users';
+type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'distribution' | 'reports' | 'clients' | 'users';
 
 interface MenuItem {
   id: ActiveSection;
@@ -50,6 +50,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       { id: 'stock', label: 'Estoque', icon: <BarChart3 className="w-5 h-5" /> },
       { id: 'weight', label: 'Pesagem', icon: <Scale className="w-5 h-5" /> },
       { id: 'weight-tracking', label: 'Acompanhamento', icon: <CalendarDays className="w-5 h-5" /> },
+      { id: 'distribution', label: 'Gestão de Enxoval', icon: <CalendarDays className="w-5 h-5" /> },
       { id: 'reports', label: 'Relatórios', icon: <TrendingUp className="w-5 h-5" /> },
     ];
     if (user?.role === 'admin') {
@@ -80,7 +81,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         `}
       >
         <div className="flex flex-col h-full">
-          <div className="flex items-center justify-between p-4 lg:hidden">
+          <div className="flex items-center justify-between p-3 lg:hidden">
             <h2 className="text-lg font-semibold text-gray-900">Menu</h2>
             <button
               onClick={onToggle}
@@ -90,29 +91,29 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
             </button>
           </div>
 
-                     <nav className="flex-1 px-4 py-6 space-y-2">
-             {menuItems.map((item) => (
-               <button
-                 key={item.id}
-                 onClick={() => {
-                   onSectionChange(item.id);
-                   onToggle();
-                 }}
-                 className={`
-                   w-full flex items-center space-x-3 px-4 py-3 text-left rounded-lg
-                   transition-all duration-200
-                   ${
-                     activeSection === item.id
-                       ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg'
-                       : 'text-gray-700 hover:bg-gray-100'
-                   }
-                 `}
-               >
-                 {item.icon}
-                 <span className="font-medium">{item.label}</span>
-               </button>
-             ))}
-           </nav>
+          <nav className="flex-1 px-2 sm:px-4 py-4 sm:py-6 space-y-2 overflow-y-auto">
+            {menuItems.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => {
+                  onSectionChange(item.id);
+                  onToggle();
+                }}
+                className={`
+                  w-full flex items-center space-x-2 sm:space-x-3 px-3 sm:px-4 py-3 text-left rounded-lg
+                  transition-all duration-200
+                  ${
+                    activeSection === item.id
+                      ? 'bg-gradient-to-r from-blue-600 to-green-600 text-white shadow-lg'
+                      : 'text-gray-700 hover:bg-gray-100'
+                  }
+                `}
+              >
+                <span className="shrink-0">{item.icon}</span>
+                <span className="font-medium text-sm sm:text-base truncate">{item.label}</span>
+              </button>
+            ))}
+          </nav>
 
            {/* App Info Button */}
            <div className="px-4 pb-4">
@@ -148,7 +149,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                    </div>
                    <h4 className="text-xl font-bold text-gray-900 mb-2">Sistema de Gestão Ecolav</h4>
                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium inline-block">
-                     Versão Beta 1.0.0
+                     Versão Beta 1.1.0
                    </div>
                    <p className="text-sm text-gray-600 mt-2">
                      Parte do ambiente <span className="font-medium text-blue-600">Ecolav 360</span>

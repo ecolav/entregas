@@ -5,6 +5,7 @@ import { Scale, Plus, Trash2, Edit } from 'lucide-react';
 import { getApiBaseUrl } from '../../config';
 import { Cage, WeighingControl, WeighingEntry } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
+import { Skeleton, SkeletonCard } from '../Skeleton';
 // duplicate import removed
 type ActiveTab = 'control' | 'cages';
 
@@ -30,6 +31,9 @@ const WeightManagement: React.FC = () => {
   // date is automatic by backend
   const [entries, setEntries] = useState<WeighingEntry[]>([]);
   const [entryForm, setEntryForm] = useState<{ cageIdOrManual: 'cage' | 'manual'; cageId?: string; tare?: string; total: string }>({ cageIdOrManual: 'cage', cageId: undefined, tare: '', total: '' });
+  const [loadingCages, setLoadingCages] = useState(false);
+  const [loadingControl, setLoadingControl] = useState(false);
+  const [loadingEntries, setLoadingEntries] = useState(false);
 
   const token = useMemo(() => localStorage.getItem('token') || '', []);
   const { user } = useAuth();
@@ -39,6 +43,7 @@ const WeightManagement: React.FC = () => {
   const authHeaders = useMemo(() => ({ Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' }), [token]);
 
   const fetchCages = React.useCallback(async () => {
+    setLoadingCages(true);
     try {
       const res = await fetch(`${api}/gaiolas`, { headers: { Authorization: `Bearer ${token}` } as HeadersInit });
       if (res.ok) {
@@ -47,6 +52,7 @@ const WeightManagement: React.FC = () => {
         setCages(mapped);
       }
     } catch (_err) { /* no-op */ }
+    finally { setLoadingCages(false); }
   }, [api, token]);
 
   const openNewCage = () => { setEditingCage(null); setCageForm({ barcode: '', tareWeight: '' }); setIsCageModalOpen(true); };
@@ -105,32 +111,35 @@ const WeightManagement: React.FC = () => {
   };
 
   const refreshControl = async (id: string) => {
-    const res = await fetch(`${api}/controles/${id}`, { headers: { Authorization: `Bearer ${token}` } });
-    if (res.ok) {
-      const data = (await res.json()) as {
-        id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; createdAt: string; entries: Array<any>;
-      };
-      const normalized: WeighingControl = {
-        id: data.id,
-        laundryGrossWeight: Number(data.laundryGrossWeight),
-        clientTotalNetWeight: Number(data.clientTotalNetWeight),
-        differenceWeight: Number(data.differenceWeight),
-        differencePercent: Number(data.differencePercent),
-        createdAt: data.createdAt,
-      };
-      setCurrentControl(normalized);
-      const mapped: WeighingEntry[] = (data.entries || []).map((e: Record<string, unknown>) => ({
-        id: String(e.id),
-        controlId: String(e.controlId),
-        cageId: (e.cageId as string) || undefined,
-        tareWeight: Number(e.tareWeight),
-        totalWeight: Number(e.totalWeight),
-        netWeight: Number(e.netWeight),
-        createdAt: String(e.createdAt),
-        cage: (e as any).cage ? { id: (e as any).cage.id as string, barcode: (e as any).cage.barcode as string, tareWeight: Number((e as any).cage.tareWeight), createdAt: (e as any).cage.createdAt as string } : undefined
-      }));
-      setEntries(mapped);
-    }
+    setLoadingControl(true);
+    try {
+      const res = await fetch(`${api}/controles/${id}`, { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = (await res.json()) as {
+          id: string; laundryGrossWeight: string | number; clientTotalNetWeight: string | number; differenceWeight: string | number; differencePercent: string | number; createdAt: string; entries: Array<any>;
+        };
+        const normalized: WeighingControl = {
+          id: data.id,
+          laundryGrossWeight: Number(data.laundryGrossWeight),
+          clientTotalNetWeight: Number(data.clientTotalNetWeight),
+          differenceWeight: Number(data.differenceWeight),
+          differencePercent: Number(data.differencePercent),
+          createdAt: data.createdAt,
+        };
+        setCurrentControl(normalized);
+        const mapped: WeighingEntry[] = (data.entries || []).map((e: Record<string, unknown>) => ({
+          id: String(e.id),
+          controlId: String(e.controlId),
+          cageId: (e.cageId as string) || undefined,
+          tareWeight: Number(e.tareWeight),
+          totalWeight: Number(e.totalWeight),
+          netWeight: Number(e.netWeight),
+          createdAt: String(e.createdAt),
+          cage: (e as any).cage ? { id: (e as any).cage.id as string, barcode: (e as any).cage.barcode as string, tareWeight: Number((e as any).cage.tareWeight), createdAt: (e as any).cage.createdAt as string } : undefined
+        }));
+        setEntries(mapped);
+      }
+    } finally { setLoadingControl(false); }
   };
 
   const submitEntry = async (e: React.FormEvent) => {
@@ -139,12 +148,15 @@ const WeightManagement: React.FC = () => {
     const body: any = { control_id: currentControl.id, peso_total: Number(entryForm.total) };
     if (entryForm.cageIdOrManual === 'cage') body.cage_id = entryForm.cageId;
     else body.peso_tara = Number(entryForm.tare || 0);
-    const res = await fetch(`${api}/pesagens`, { method: 'POST', headers: authHeaders as HeadersInit, body: JSON.stringify(body) });
-    if (res.ok) {
-      await refreshControl(currentControl.id);
-      setEntryForm({ cageIdOrManual: 'cage', cageId: undefined, tare: '', total: '' });
-      addToast({ type: 'success', message: 'Pesagem adicionada!' });
-    }
+    setLoadingEntries(true);
+    try {
+      const res = await fetch(`${api}/pesagens`, { method: 'POST', headers: authHeaders as HeadersInit, body: JSON.stringify(body) });
+      if (res.ok) {
+        await refreshControl(currentControl.id);
+        setEntryForm({ cageIdOrManual: 'cage', cageId: undefined, tare: '', total: '' });
+        addToast({ type: 'success', message: 'Pesagem adicionada!' });
+      }
+    } finally { setLoadingEntries(false); }
   };
 
   useEffect(() => { fetchCages(); }, [fetchCages]);
@@ -157,9 +169,9 @@ const WeightManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <button onClick={() => setActiveTab('control')} className={`px-3 py-2 rounded-lg text-sm ${activeTab==='control'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Controle</button>
-        <button onClick={() => setActiveTab('cages')} className={`px-3 py-2 rounded-lg text-sm ${activeTab==='cages'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Gaiolas</button>
+      <div className="flex items-center gap-2 sm:gap-3">
+        <button onClick={() => setActiveTab('control')} className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm ${activeTab==='control'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Controle</button>
+        <button onClick={() => setActiveTab('cages')} className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm ${activeTab==='cages'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Gaiolas</button>
       </div>
 
       {activeTab === 'cages' && (
@@ -176,7 +188,13 @@ const WeightManagement: React.FC = () => {
 
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="divide-y">
-              {cages.length === 0 && (
+              {loadingCages && (
+                <div className="p-4">
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-2/3 mt-2" />
+                </div>
+              )}
+              {cages.length === 0 && !loadingCages && (
                 <div className="p-6 text-center text-gray-500">Nenhuma gaiola cadastrada.</div>
               )}
               {cages.map(c => (
@@ -220,65 +238,76 @@ const WeightManagement: React.FC = () => {
 
       {activeTab === 'control' && (
         <div className="space-y-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-bold text-gray-900">Controle de Pesagem</h2>
-              <p className="text-gray-600">Lance as pesagens e acompanhe as diferenças.</p>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Controle de Pesagem</h2>
+              <p className="text-gray-600 text-sm sm:text-base">Lance as pesagens e acompanhe as diferenças.</p>
             </div>
           </div>
 
           {!currentControl ? (
-            <div className="bg-white rounded-xl p-6 shadow-sm border">
-              <div className="grid grid-cols-1 sm:grid-cols-5 gap-4 items-end">
+            <div className="bg-white rounded-xl p-4 sm:p-6 shadow-sm border">
+              <div className="grid grid-cols-1 sm:grid-cols-5 gap-3 sm:gap-4 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Tipo</label>
-                  <select value={controlKind} onChange={(e)=>setControlKind(e.target.value as any)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500">
+                  <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Tipo</label>
+                  <select value={controlKind} onChange={(e)=>setControlKind(e.target.value as any)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm">
                     <option value="limpa">Roupa Limpa</option>
                     <option value="suja">Roupa Suja</option>
                   </select>
                 </div>
                 {controlKind === 'limpa' && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Peso bruto informado pela lavanderia (kg)</label>
-                    <input type="number" step="0.01" min="0" value={controlGross} onChange={(e)=>setControlGross(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Peso bruto informado pela lavanderia (kg)</label>
+                    <input type="number" step="0.01" min="0" value={controlGross} onChange={(e)=>setControlGross(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
                   </div>
                 )}
                 {controlKind === 'suja' && (
                   <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Data prevista de entrega</label>
-                    <input type="date" value={expectedDate} onChange={(e)=>setExpectedDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1">Data prevista de entrega</label>
+                    <input type="date" value={expectedDate} onChange={(e)=>setExpectedDate(e.target.value)} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 text-sm" />
                   </div>
                 )}
-                <button onClick={startControl} className="px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg">Iniciar Controle</button>
+                <button onClick={startControl} className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-lg text-sm">Iniciar Controle</button>
               </div>
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div className="bg-white rounded-xl p-4 border">
-                  <p className="text-xs text-gray-600">Peso bruto lavanderia</p>
-                  <p className="text-2xl font-bold">{currentControl.laundryGrossWeight} kg</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border">
-                  <p className="text-xs text-gray-600">Somatório líquidos</p>
-                  <p className="text-2xl font-bold">{currentControl.clientTotalNetWeight} kg</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border">
-                  <p className="text-xs text-gray-600">Diferença</p>
-                  <p className="text-2xl font-bold">{currentControl.differenceWeight} kg</p>
-                </div>
-                <div className="bg-white rounded-xl p-4 border flex items-center justify-between">
-                  <div>
-                    <p className="text-xs text-gray-600">Percentual</p>
-                    <p className="text-2xl font-bold">{currentControl.differencePercent}%</p>
-                  </div>
-                  <div className={`px-2 py-1 rounded-full text-xs font-medium ${pctStatus(currentControl.differencePercent).cls}`}>{pctStatus(currentControl.differencePercent).text}</div>
-                </div>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 sm:gap-4">
+                {loadingControl ? (
+                  <>
+                    <SkeletonCard />
+                    <SkeletonCard />
+                    <SkeletonCard />
+                    <SkeletonCard />
+                  </>
+                ) : (
+                  <>
+                    <div className="bg-white rounded-xl p-4 border">
+                      <p className="text-xs text-gray-600">Peso bruto lavanderia</p>
+                      <p className="text-2xl font-bold">{currentControl.laundryGrossWeight} kg</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border">
+                      <p className="text-xs text-gray-600">Somatório líquidos</p>
+                      <p className="text-2xl font-bold">{currentControl.clientTotalNetWeight} kg</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border">
+                      <p className="text-xs text-gray-600">Diferença</p>
+                      <p className="text-2xl font-bold">{currentControl.differenceWeight} kg</p>
+                    </div>
+                    <div className="bg-white rounded-xl p-4 border flex items-center justify-between">
+                      <div>
+                        <p className="text-xs text-gray-600">Percentual</p>
+                        <p className="text-2xl font-bold">{currentControl.differencePercent}%</p>
+                      </div>
+                      <div className={`px-2 py-1 rounded-full text-xs font-medium ${pctStatus(currentControl.differencePercent).cls}`}>{pctStatus(currentControl.differencePercent).text}</div>
+                    </div>
+                  </>
+                )}
               </div>
 
               <div className="bg-white rounded-xl p-6 border space-y-4">
                 <h3 className="font-semibold">Adicionar Pesagem</h3>
-                <form onSubmit={submitEntry} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end">
+                <form onSubmit={submitEntry} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end opacity-100">
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tara</label>
                     <div className="flex gap-2">
@@ -302,13 +331,21 @@ const WeightManagement: React.FC = () => {
                     <label className="block text-sm font-medium text-gray-700 mb-1">Peso Total (kg)</label>
                     <input type="number" step="0.01" min="0" value={entryForm.total} onChange={(e)=>setEntryForm(v=>({...v, total: e.target.value}))} className="w-full px-3 py-2 border rounded-lg" required />
                   </div>
-                  <button type="submit" className="px-4 py-2 bg-blue-600 text-white rounded-lg">Adicionar</button>
+                  <button type="submit" disabled={loadingEntries} className={`px-4 py-2 rounded-lg text-white ${loadingEntries ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
+                    {loadingEntries ? 'Adicionando...' : 'Adicionar'}
+                  </button>
                 </form>
               </div>
 
               <div className="bg-white rounded-xl border overflow-hidden">
                 <div className="divide-y">
-                  {entries.length === 0 && (
+                  {loadingEntries && (
+                    <div className="p-3 sm:p-4">
+                      <Skeleton className="h-4 w-full" />
+                      <Skeleton className="h-4 w-5/6 mt-2" />
+                    </div>
+                  )}
+                  {entries.length === 0 && !loadingEntries && (
                     <div className="p-6 text-center text-gray-500">Nenhuma pesagem lançada.</div>
                   )}
                   {entries.map(e => (
@@ -329,6 +366,7 @@ const WeightManagement: React.FC = () => {
                 <button onClick={()=>setCurrentControl(null)} className="px-4 py-2 border rounded-lg">Cancelar</button>
                 <button onClick={async ()=>{
                   if (!currentControl) return;
+                  setLoadingControl(true);
                   await fetch(`${api}/controles/${currentControl.id}/finalizar`, { method: 'PUT', headers: { Authorization: `Bearer ${token}` } });
                   addToast({ type: 'success', message: 'Pesagem finalizada! Vá em Acompanhamento para visualizar o comparativo.' });
                   // limpar formulários
@@ -336,7 +374,8 @@ const WeightManagement: React.FC = () => {
                   setControlGross('');
                   setControlKind('limpa');
                   setCurrentControl(null);
-                }} className="px-4 py-2 rounded-lg text-white bg-gradient-to-r from-blue-600 to-green-600">Finalizar Pesagem</button>
+                  setLoadingControl(false);
+                }} disabled={loadingControl} className={`px-4 py-2 rounded-lg text-white ${loadingControl ? 'bg-green-500/70 cursor-not-allowed' : 'bg-gradient-to-r from-blue-600 to-green-600'}`}>${''}Finalizar Pesagem</button>
               </div>
             </>
           )}

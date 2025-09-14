@@ -304,7 +304,12 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
     (async () => {
       const token = localStorage.getItem('token');
-      const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(item) });
+      const payload = {
+        ...item,
+        // Se admin estiver filtrando um cliente, criar o item vinculado a esse cliente
+        clientId: (user?.role === 'admin' && adminClientIdFilter) ? adminClientIdFilter : (item as any).clientId
+      };
+      const res = await fetch(`${baseUrl}/items`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' }, body: JSON.stringify(payload) });
       if (res.ok) {
         const created = await res.json();
         setLinenItems(prev => [...prev, created]);

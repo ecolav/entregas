@@ -99,6 +99,19 @@ export interface StockMovement {
   item?: LinenItem;
 }
 
+// Enxoval distribuído (item alocado em leito)
+export interface DistributedItem {
+  id: string;
+  linenItemId: string;
+  bedId: string;
+  allocatedAt: string;
+  status: 'allocated' | 'pendingCollection' | 'collected';
+  orderId?: string;
+  clientId?: string;
+  linenItem?: LinenItem;
+  bed?: Bed;
+}
+
 // Weighing (Pesagem)
 export interface Cage {
   id: string;

@@ -557,6 +557,43 @@ app.get('/pesagens/relatorio', requireAuth(['admin','manager']), async (req, res
   } catch (e) { next(e); }
 });
 
+// ==============================
+// Distributed Items (enxoval alocado)
+// ==============================
+const distributedItemSchema = z.object({ linenItemId: z.string().min(1), bedId: z.string().min(1), status: z.enum(['allocated','pendingCollection','collected']).default('allocated'), orderId: z.string().optional().nullable(), allocatedAt: z.string().optional().nullable() });
+
+app.get('/distributed-items', requireAuth(['admin','manager']), async (req: any, res, next) => {
+  try {
+    const where: any = {};
+    if (req.user.role === 'manager' && req.user.clientId) where.clientId = req.user.clientId;
+    else if (req.query.clientId) where.clientId = String(req.query.clientId);
+    if (req.query.sectorId) where.bed = { sectorId: String(req.query.sectorId) };
+    const data = await prisma.distributedItem.findMany({ where, include: { linenItem: true, bed: { include: { sector: true } } } } as any);
+    res.json(data);
+  } catch (e) { next(e); }
+});
+
+app.post('/distributed-items', requireAuth(['admin','manager']), async (req: any, res, next) => {
+  try {
+    const parsed = distributedItemSchema.parse(req.body);
+    const bed = await prisma.bed.findUnique({ where: { id: parsed.bedId }, include: { sector: true } });
+    if (!bed) return res.status(400).json({ error: 'Invalid bedId' });
+    if (req.user.role === 'manager' && bed.sector.clientId && req.user.clientId !== bed.sector.clientId) return res.status(403).json({ error: 'Forbidden' });
+    const created = await prisma.distributedItem.create({ data: { linenItemId: parsed.linenItemId, bedId: parsed.bedId, status: parsed.status, orderId: parsed.orderId ?? null, clientId: bed.sector.clientId ?? null, allocatedAt: parsed.allocatedAt ? new Date(parsed.allocatedAt) : new Date() } as any });
+    res.status(201).json(created);
+  } catch (e) { next(e); }
+});
+
+app.put('/distributed-items/:id', requireAuth(['admin','manager']), async (req: any, res, next) => {
+  try {
+    const parsed = distributedItemSchema.partial().parse(req.body);
+    const existing = await prisma.distributedItem.findUnique({ where: { id: req.params.id }, include: { bed: { include: { sector: true } } } });
+    if (!existing) return res.status(404).end();
+    if (req.user.role === 'manager' && existing.clientId && req.user.clientId !== existing.clientId) return res.status(403).json({ error: 'Forbidden' });
+    const updated = await prisma.distributedItem.update({ where: { id: existing.id }, data: parsed as any });
+    res.json(updated);
+  } catch (e) { next(e); }
+});
 // List entries for a given date (YYYY-MM-DD)
 app.get('/pesagens/por-dia', requireAuth(['admin','manager']), async (req, res, next) => {
   try {
@@ -736,7 +773,11 @@ app.get('/items', requireAuth(['admin','manager']), async (req: any, res, next) 
 app.post('/items', requireAuth(['admin','manager']), async (req: any, res, next) => {
   try {
     const parsed = itemSchema.parse(req.body);
-    const clientId = req.user.role === 'manager' ? (req.user.clientId ?? null) : (parsed.clientId ?? null);
+    let clientId = req.user.role === 'manager' ? (req.user.clientId ?? null) : (parsed.clientId ?? null);
+    // Se admin não enviar clientId, recusar para evitar item global nesta nova regra
+    if (req.user.role === 'admin' && clientId === null) {
+      return res.status(400).json({ error: 'Missing clientId for admin-created item' });
+    }
     if (clientId !== null) {
       const exists = await prisma.client.findUnique({ where: { id: clientId } });
       if (!exists) return res.status(400).json({ error: 'Invalid clientId' });

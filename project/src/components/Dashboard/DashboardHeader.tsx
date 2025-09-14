@@ -38,19 +38,22 @@ const DashboardHeader: React.FC<DashboardHeaderProps> = ({ user, onMenuClick }) 
           </div>
         </div>
 
-        <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2 sm:space-x-4">
           {isAdmin && setAdminClientIdFilter && (
-            <select
-              value={adminClientIdFilter ?? ''}
-              onChange={(e)=>setAdminClientIdFilter(e.target.value || null)}
-              className="px-3 py-2 border rounded-lg text-sm hidden md:block"
-              title="Filtrar por cliente"
-            >
-              <option value="">Todos os clientes</option>
-              {sortedClients.map(c => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-gray-600 sm:hidden">Cliente:</span>
+              <select
+                value={adminClientIdFilter ?? ''}
+                onChange={(e)=>setAdminClientIdFilter(e.target.value || null)}
+                className="px-2 py-2 border rounded-lg text-xs sm:text-sm max-w-[200px] sm:max-w-none"
+                title="Filtrar por cliente"
+              >
+                <option value="">Todos</option>
+                {sortedClients.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
           )}
           {user && (
             <div className="flex items-center space-x-3">

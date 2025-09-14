@@ -22,6 +22,7 @@ model Client {
   linenItems      LinenItem[]
   stockMovements  StockMovement[]
   weighingControls WeighingControl[]
+  distributedItems DistributedItem[]
 }
 
 model Sector {
@@ -46,6 +47,7 @@ model Bed {
   sector    Sector  @relation(fields: [sectorId], references: [id])
 
   orders    Order[]
+  distributedItems DistributedItem[]
 }
 
 model LinenItem {
@@ -61,6 +63,7 @@ model LinenItem {
 
   stockMovements StockMovement[]
   orderItems     OrderItem[]
+  distributedItems DistributedItem[]
 }
 
 model OrderItem {
@@ -145,6 +148,21 @@ model WeighingControl {
   createdAt            DateTime @default(now())
 
   entries              WeighingEntry[]
+}
+
+// Items allocated to beds (enxoval distribuído)
+model DistributedItem {
+  id           String   @id @default(cuid())
+  linenItemId  String
+  bedId        String
+  allocatedAt  DateTime @default(now())
+  status       String   // 'allocated' | 'pendingCollection' | 'collected'
+  orderId      String?
+  clientId     String?
+
+  linenItem    LinenItem @relation(fields: [linenItemId], references: [id])
+  bed          Bed       @relation(fields: [bedId], references: [id])
+  client       Client?   @relation(fields: [clientId], references: [id])
 }
 
 // Laundry Weighing - Individual entries

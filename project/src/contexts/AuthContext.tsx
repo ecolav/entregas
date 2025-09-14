@@ -59,6 +59,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
         setIsLoading(false);
         return true;
       }
+      try {
+        const err = await res.json();
+        console.warn('Login falhou:', err);
+      } catch { /* ignore */ }
       setIsLoading(false);
       return false;
     } catch (error) {

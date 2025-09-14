@@ -138,6 +138,21 @@ async function ensureDatabase() {
       CONSTRAINT fk_weighingentry_cage FOREIGN KEY (cageId) REFERENCES cage(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
+  // Distributed items (enxoval alocado)
+  await db.query(`CREATE TABLE IF NOT EXISTS distributeditem (
+      id VARCHAR(191) PRIMARY KEY,
+      linenItemId VARCHAR(191) NOT NULL,
+      bedId VARCHAR(191) NOT NULL,
+      allocatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      status VARCHAR(32) NOT NULL,
+      orderId VARCHAR(191) NULL,
+      clientId VARCHAR(191) NULL,
+      INDEX (linenItemId), INDEX (bedId), INDEX (clientId),
+      CONSTRAINT fk_distributeditem_item FOREIGN KEY (linenItemId) REFERENCES linenitem(id) ON DELETE CASCADE,
+      CONSTRAINT fk_distributeditem_bed FOREIGN KEY (bedId) REFERENCES bed(id) ON DELETE CASCADE,
+      CONSTRAINT fk_distributeditem_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
   // Ensure missing columns for existing databases
   try {
     await db.query(`SELECT clientId FROM linenitem LIMIT 1;`);

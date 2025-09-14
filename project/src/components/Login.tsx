@@ -16,7 +16,16 @@ const Login: React.FC = () => {
     
     const success = await login(email, password);
     if (!success) {
-      setError('Credenciais inválidas');
+      // Mensagens mais claras conforme casos comuns
+      if (!email || !password) {
+        setError('Preencha email e senha.');
+        return;
+      }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+        setError('Email inválido.');
+        return;
+      }
+      setError('Email ou senha incorretos.');
     }
   };
 
@@ -70,7 +79,7 @@ const Login: React.FC = () => {
           </div>
 
           {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
               {error}
             </div>
           )}
@@ -94,7 +103,7 @@ const Login: React.FC = () => {
         <div className="mt-8 p-4 bg-blue-50 rounded-lg">
           <div className="flex items-center justify-center space-x-2">
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-            <p className="text-sm text-blue-700 font-medium">Versão Beta 1.0.0</p>
+            <p className="text-sm text-blue-700 font-medium">Versão Beta 1.1.0</p>
             <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
           </div>
         </div>
