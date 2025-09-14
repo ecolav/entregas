@@ -5,9 +5,8 @@ import { Package, TrendingUp, TrendingDown, Plus, Minus, FileText, MessageCircle
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
 
 const StockManagement: React.FC = () => {
-  const { linenItems, addStockMovement, clients } = useApp();
+  const { linenItems, addStockMovement, clients, adminClientIdFilter, setAdminClientIdFilter } = useApp();
   const { user } = useAuth();
-  const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedItem, setSelectedItem] = useState<string>('');
   const [movementType, setMovementType] = useState<'in' | 'out'>('in');
   const [quantity, setQuantity] = useState<number>(0);
@@ -32,7 +31,7 @@ const StockManagement: React.FC = () => {
     setReason('');
   };
 
-  const visibleClientId = user?.role === 'admin' ? (selectedClientId || undefined) : user?.clientId;
+  const visibleClientId = user?.role === 'admin' ? (adminClientIdFilter || undefined) : user?.clientId;
   const visibleItems = linenItems.filter(i => (i.clientId ? i.clientId === visibleClientId : true));
   const lowStockItems = visibleItems.filter(item => item.currentStock <= item.minimumStock);
   const totalItems = visibleItems.length;
@@ -115,8 +114,8 @@ const StockManagement: React.FC = () => {
       okItems.forEach(i => { lines.push(formatItem(i)); lines.push(''); });
     }
 
-    const visibleClientId = user?.role === 'admin' ? (selectedClientId || undefined) : user?.clientId;
-    const clientNumber = (clients.find(c => c.id === visibleClientId || '')?.whatsappNumber) || undefined;
+    const clientId = user?.role === 'admin' ? (adminClientIdFilter || undefined) : user?.clientId;
+    const clientNumber = (clients.find(c => c.id === clientId || '')?.whatsappNumber) || undefined;
     const url = buildWhatsAppUrl({ text: lines.join('\n'), phone: clientNumber });
     window.open(url, '_blank');
   };
@@ -130,7 +129,7 @@ const StockManagement: React.FC = () => {
         </div>
         <div className="flex flex-wrap gap-2">
           {user?.role === 'admin' && (
-            <select value={selectedClientId} onChange={(e)=>setSelectedClientId(e.target.value)} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm">
+            <select value={adminClientIdFilter ?? ''} onChange={(e)=>setAdminClientIdFilter && setAdminClientIdFilter(e.target.value || null)} className="px-2 sm:px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-xs sm:text-sm">
               <option value="">Todos os clientes</option>
               {clients.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
