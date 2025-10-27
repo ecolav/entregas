@@ -103,7 +103,7 @@ const LinenDistribution: React.FC = () => {
       // pick closest by time
       candidates.sort((a,b) => Math.abs(new Date(a.createdAt).getTime() - allocatedTime) - Math.abs(new Date(b.createdAt).getTime() - allocatedTime));
       const reason = candidates[0].reason;
-      const m = reason.match(/por\s+([^\(]+)\s*\(/i);
+      const m = reason.match(/por\s+([^(]+)\s*\(/i);
       if (m && m[1]) return m[1].trim();
       return null;
     } catch {
@@ -235,7 +235,7 @@ const LinenDistribution: React.FC = () => {
                                 const item = linenItems.find(li => li.id === di.linenItemId);
                                 const hrs = elapsedHours(di.allocatedAt);
                                 const alert = hrs >= 24;
-                                const distributorFromApi = (di as any).distributedByName as string | undefined;
+                                const distributorFromApi = (di as DistributedItem & { distributedByName?: string }).distributedByName;
                                 const distributor = distributorFromApi || findDistributorName(di);
                                 return (
                                   <div key={di.id} className="py-2 flex items-center justify-between">

@@ -188,7 +188,7 @@ async function compressImageSafely(file: File, maxDim: number, quality: number):
     if (!file.type.startsWith('image/')) return file;
     const bitmap = await createImageBitmap(file).catch(() => null);
     if (!bitmap) return file;
-    let { width, height } = bitmap;
+    const { width, height } = bitmap;
     if (width <= maxDim && height <= maxDim) return file;
     const ratio = width > height ? maxDim / width : maxDim / height;
     const targetW = Math.round(width * ratio);

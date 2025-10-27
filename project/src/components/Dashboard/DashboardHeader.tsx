@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
-import { Menu, LogOut, User } from 'lucide-react';
+import { Menu, LogOut } from 'lucide-react';
 // Logo principal (ECOLAV) em páginas autenticadas
 import { User as UserType } from '../../types';
 import { useApp } from '../../contexts/AppContext';

@@ -58,7 +58,7 @@ const AppContent: React.FC = () => {
 
 // Componente interno para usar useApp e verificar isInitialLoading
 const DashboardWrapper: React.FC = () => {
-  const { isInitialLoading, loadingStep, loadingProgress } = useApp();
+  const { isInitialLoading, loadingStep } = useApp();
   
   if (isInitialLoading) {
     return (

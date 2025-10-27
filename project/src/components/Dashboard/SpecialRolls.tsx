@@ -243,7 +243,9 @@ const SpecialRolls: React.FC = () => {
     (async () => {
       const compressed = await compressImageSafely(file, 1280, 0.8);
       setReceivedForm({ ...receivedForm, receivedPhoto: compressed });
-      try { receivedPreviewCleanup(); } catch {}
+      try { receivedPreviewCleanup(); } catch {
+        // Ignore cleanup errors
+      }
       const url = URL.createObjectURL(compressed);
       setReceivedPreviewUrl(url);
     })();
@@ -259,7 +261,9 @@ const SpecialRolls: React.FC = () => {
     (async () => {
       const compressed = await compressImageSafely(file, 1280, 0.8);
       setDispatchedForm({ ...dispatchedForm, dispatchedPhoto: compressed });
-      try { dispatchedPreviewCleanup(); } catch {}
+      try { dispatchedPreviewCleanup(); } catch {
+        // Ignore cleanup errors
+      }
       const url = URL.createObjectURL(compressed);
       setDispatchedPreviewUrl(url);
     })();
