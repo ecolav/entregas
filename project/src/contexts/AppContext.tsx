@@ -10,7 +10,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 // Sistema de cache removido para garantir atualizações em tempo real
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { addToast } = useToast();
   const [sectors, setSectors] = useState<Sector[]>([]);
   const [beds, setBeds] = useState<Bed[]>([]);
@@ -24,74 +24,164 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
   const [adminClientIdFilter, setAdminClientIdFilter] = useState<string | null>(null);
+  const [loadingStep, setLoadingStep] = useState<string>('validating');
+  const [loadingProgress, setLoadingProgress] = useState<number>(0);
   const ordersChannelRef = useRef<BroadcastChannel | null>(null);
+  const hasLoadedOnce = useRef(false);
   const getBaseUrl = () => getApiBaseUrl();
 
   // Função simplificada para carregar dados sempre frescos
-  const loadData = useCallback(async () => {
+  // silent = true: não mostra loading (para refresh em background)
+  const loadData = useCallback(async (silent = false) => {
     const baseUrl = getBaseUrl();
     const token = localStorage.getItem('token');
-    if (!baseUrl || !token) return;
+    if (!baseUrl || !token) {
+      setIsInitialLoading(false);
+      return;
+    }
 
-    setIsLoading(true);
+    // ⚠️ BLOQUEIO CRÍTICO: Se é admin com clientId mas filtro não está setado, ABORTAR!
+    if (user?.role === 'admin' && user.clientId && !adminClientIdFilter) {
+      console.error('🚫 BLOQUEADO: Admin tem clientId mas filtro não está setado!', {
+        userClientId: user.clientId,
+        adminClientIdFilter
+      });
+      setIsInitialLoading(false); // IMPORTANTE: definir como false mesmo quando bloqueado
+      return; // NÃO CARREGA NADA
+    }
+
+    if (!silent) {
+      setIsLoading(true);
+      setLoadingStep('validating');
+      setLoadingProgress(0);
+    }
     const authHeaders = { Authorization: `Bearer ${token}` } as const;
 
     try {
       const qs = (user?.role === 'admin' && adminClientIdFilter) ? `?clientId=${encodeURIComponent(adminClientIdFilter)}` : '';
-      const [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes] = await Promise.all([
-        fetch(`${baseUrl}/clients`, { headers: authHeaders }),
-        fetch(`${baseUrl}/sectors${qs}`, { headers: authHeaders }),
-        fetch(`${baseUrl}/beds${qs}`, { headers: authHeaders }),
-        fetch(`${baseUrl}/items${qs}`, { headers: authHeaders }),
-        fetch(`${baseUrl}/orders${qs}`, { headers: authHeaders }),
+      
+      
+      // Carregamento progressivo
+      if (!silent) {
+        setLoadingStep('clients');
+        setLoadingProgress(10);
+      }
+      
+      const clientsRes = await fetch(`${baseUrl}/clients`, { headers: authHeaders });
+      const clientsData = clientsRes.ok ? await clientsRes.json() : [];
+      setClients(clientsData);
+      
+      if (!silent) {
+        setLoadingStep('sectors');
+        setLoadingProgress(30);
+      }
+      
+      const sectorsRes = await fetch(`${baseUrl}/sectors${qs}`, { headers: authHeaders });
+      const sectorsData = sectorsRes.ok ? await sectorsRes.json() : [];
+      setSectors(sectorsData);
+      
+      if (!silent) {
+        setLoadingStep('beds');
+        setLoadingProgress(50);
+      }
+      
+      const bedsRes = await fetch(`${baseUrl}/beds${qs}`, { headers: authHeaders });
+      const bedsData = bedsRes.ok ? await bedsRes.json() : [];
+      setBeds(bedsData);
+      
+      if (!silent) {
+        setLoadingStep('items');
+        setLoadingProgress(70);
+      }
+      
+      const itemsRes = await fetch(`${baseUrl}/items${qs}`, { headers: authHeaders });
+      const itemsData = itemsRes.ok ? await itemsRes.json() : [];
+      setLinenItems(itemsData);
+      
+      if (!silent) {
+        setLoadingStep('orders');
+        setLoadingProgress(85);
+      }
+      
+      const ordersRes = await fetch(`${baseUrl}/orders${qs}`, { headers: authHeaders });
+      const ordersData = ordersRes.ok ? await ordersRes.json() : [];
+      setOrders(ordersData);
+      
+      if (!silent) {
+        setLoadingStep('finalizing');
+        setLoadingProgress(95);
+      }
+      
+      // Carregar dados restantes em paralelo
+      const [stockRes, usersRes] = await Promise.all([
         fetch(`${baseUrl}/stock-movements${qs}`, { headers: authHeaders }),
         fetch(`${baseUrl}/users`, { headers: authHeaders }),
       ]);
 
-      const results = await Promise.all([
-        clientsRes.ok ? clientsRes.json() : [],
-        sectorsRes.ok ? sectorsRes.json() : [],
-        bedsRes.ok ? bedsRes.json() : [],
-        itemsRes.ok ? itemsRes.json() : [],
-        ordersRes.ok ? ordersRes.json() : [],
+      // Se qualquer chamada retornar 401, forçar logout para renovar o token
+      const anyUnauthorized = [clientsRes, sectorsRes, bedsRes, itemsRes, ordersRes, stockRes, usersRes].some(r => r.status === 401);
+      if (anyUnauthorized) {
+        logout();
+        return;
+      }
+
+      const [stockData, usersData] = await Promise.all([
         stockRes.ok ? stockRes.json() : [],
         usersRes.ok ? usersRes.json() : [],
       ]);
 
-      const [clientsData, sectorsData, bedsData, itemsData, ordersData, stockData, usersData] = results;
-
-      setClients(clientsData);
-      setSectors(sectorsData);
-      setBeds(bedsData);
-      setLinenItems(itemsData);
-      setOrders(ordersData);
       setStockMovements(stockData);
       setSystemUsers(usersData);
 
       setLastRefresh(Date.now());
+      
+      if (!silent) {
+        setLoadingStep('completed');
+        setLoadingProgress(100);
+      }
     } catch (error) {
       console.error('Erro ao carregar dados:', error);
-      addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
+      if (!silent) {
+        addToast({ type: 'error', message: 'Erro ao carregar dados. Tente novamente.' });
+      }
     } finally {
-      setIsLoading(false);
+      if (!silent) {
+        setIsLoading(false);
+      }
       setIsInitialLoading(false);
     }
-  }, [user?.id, user?.role, adminClientIdFilter, addToast]);
+  }, [user?.id, user?.role, adminClientIdFilter, addToast, logout]);
 
-  const refreshAll = useCallback(async () => {
-    await loadData();
+  const refreshAll = useCallback(async (silent = true) => {
+    await loadData(silent);
   }, [loadData]);
 
   const notify = (type: string) => {
     try { new BroadcastChannel('ecolav-app').postMessage({ type }); } catch { /* no-op */ }
   };
 
-  // Carregar dados quando o usuário logar
+  // Carregar dados quando user logar ou filtro mudar
   useEffect(() => {
-    if (user) {
-      loadData();
+    if (!user) {
+      hasLoadedOnce.current = false;
+      setIsInitialLoading(false);
+      return;
     }
-  }, [user, loadData]);
+    
+    // Se é admin com clientId, settar filtro ANTES de qualquer coisa
+    if (user.role === 'admin' && user.clientId) {
+      if (adminClientIdFilter !== user.clientId) {
+        setAdminClientIdFilter(user.clientId);
+        return; // Espera o próximo render com filtro correto
+      }
+    }
+    
+    // Agora o filtro está correto (ou não é necessário), pode carregar
+    loadData(false).finally(() => {
+      setIsInitialLoading(false);
+    });
+    hasLoadedOnce.current = true;
+  }, [user, adminClientIdFilter, loadData]);
 
   // Limpar dados quando o usuário sair
   useEffect(() => {
@@ -103,6 +193,8 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       setStockMovements([]);
       setClients([]);
       setSystemUsers([]);
+      setAdminClientIdFilter(null);
+      hasLoadedOnce.current = false;
     }
   }, [user]);
 
@@ -151,10 +243,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     const token = localStorage.getItem('token');
     if (!token) return;
     
-    // Atualizar a cada 1 segundo para tempo real máximo
+    // Atualizar a cada 5 segundos (reduzido de 1s para melhorar performance)
     const id = setInterval(() => {
       void refreshAll();
-    }, 1000);
+    }, 5000);
     
     return () => clearInterval(id);
   }, [user, refreshAll]);
@@ -293,6 +385,30 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       const res = await fetch(`${baseUrl}/beds/${id}`, { method: 'DELETE', headers: { Authorization: token ? `Bearer ${token}` : '' } });
       if (res.ok) setBeds(prev => prev.filter(b => b.id !== id));
     })();
+  };
+
+  const getOrCreateVirtualSectorBed = async (sectorId: string): Promise<Bed | null> => {
+    // Busca por um leito virtual padronizado para distribuição por setor
+    const existing = beds.find(b => b.sectorId === sectorId && b.number === 'Sem leito (Setor)');
+    if (existing) return existing;
+    const baseUrl = getBaseUrl();
+    if (!baseUrl) {
+      const newBed: Bed = { id: uuidv4(), number: 'Sem leito (Setor)', sectorId, status: 'free', token: uuidv4() } as Bed;
+      setBeds(prev => [...prev, newBed]);
+      return newBed;
+    }
+    const token = localStorage.getItem('token');
+    const res = await fetch(`${baseUrl}/beds`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: token ? `Bearer ${token}` : '' },
+      body: JSON.stringify({ number: 'Sem leito (Setor)', sectorId, status: 'free' })
+    });
+    if (!res.ok) return null;
+    const created = await res.json();
+    // Refresh e broadcast para manter realtime
+    await refreshAll();
+    notify('beds-changed');
+    return created as Bed;
   };
 
   const addLinenItem = (item: Omit<LinenItem, 'id' | 'createdAt'>) => {
@@ -657,12 +773,15 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       isInitialLoading,
       adminClientIdFilter,
       setAdminClientIdFilter,
+      loadingStep,
+      loadingProgress,
       addSector,
       updateSector,
       deleteSector,
       addBed,
       updateBed,
       deleteBed,
+      getOrCreateVirtualSectorBed,
       addLinenItem,
       updateLinenItem,
       deleteLinenItem,

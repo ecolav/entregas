@@ -162,12 +162,15 @@ export interface AppContextType {
   isInitialLoading: boolean;
   adminClientIdFilter?: string | null;
   setAdminClientIdFilter?: (id: string | null) => void;
+  loadingStep?: string;
+  loadingProgress?: number;
   addSector: (sector: Omit<Sector, 'id' | 'createdAt'>) => void;
   updateSector: (id: string, sector: Partial<Sector>) => void;
   deleteSector: (id: string) => void;
   addBed: (bed: Omit<Bed, 'id' | 'token'>) => void;
   updateBed: (id: string, bed: Partial<Bed>) => void;
   deleteBed: (id: string) => void;
+  getOrCreateVirtualSectorBed: (sectorId: string) => Promise<Bed | null>;
   addLinenItem: (item: Omit<LinenItem, 'id' | 'createdAt'>) => void;
   updateLinenItem: (id: string, item: Partial<LinenItem>) => void;
   deleteLinenItem: (id: string) => void;

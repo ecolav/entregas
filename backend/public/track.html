@@ -1,0 +1,373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acompanhamento ROL Especial - ECOLAV</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @media print {
+      body { background: #ffffff !important; }
+      .no-print { display: none !important; }
+      .container { max-width: 100% !important; padding: 0 !important; }
+      .shadow, .shadow-md, .shadow-lg { box-shadow: none !important; }
+      .bg-white { background: #ffffff !important; }
+    }
+  </style>
+    <script>
+    (function () {
+      var tried = 0;
+      var sources = [
+        'vendor/qrcode.min.js?v=1',
+        '/vendor/qrcode.min.js?v=1',
+        'https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js',
+        'https://unpkg.com/qrcode@1.5.3/build/qrcode.min.js',
+        // Fallback alternativo (qrcodejs API)
+        'https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js'
+      ];
+      function loadNext() {
+        if (tried >= sources.length) {
+          console.error('QRCode library failed to load');
+          window.__qrUnavailable = true;
+          return;
+        }
+        var s = document.createElement('script');
+        s.src = sources[tried++];
+        s.async = true;
+        s.onload = function () { window.__qrReady = true; };
+        s.onerror = loadNext;
+        document.head.appendChild(s);
+      }
+      loadNext();
+    })();
+    </script>
+    <link rel="icon" type="image/png" href="/ecolav.png">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="container mx-auto px-4 py-8 max-w-4xl">
+        <!-- Header -->
+      <div class="text-center mb-4">
+            <img src="/ecolav.png" alt="ECOLAV" class="h-16 mx-auto mb-4">
+            <h1 class="text-3xl font-bold text-gray-900 mb-2">Acompanhamento ROL Especial</h1>
+            <p class="text-gray-600">Acompanhe o status do seu item em tempo real</p>
+        </div>
+
+      <!-- Print Button -->
+      <div class="flex justify-end mb-6 no-print">
+        <button onclick="window.print()" class="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-900">
+          Imprimir
+        </button>
+      </div>
+
+        <!-- Search Form -->
+      <div class="bg-white rounded-lg shadow-md p-6 mb-6 no-print">
+            <div class="flex flex-col md:flex-row gap-4">
+                <input 
+                    type="text" 
+                    id="rollNumber" 
+                    placeholder="Digite o número do ROL (ex: ROL-202501-0001)"
+                    class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                >
+                <button 
+                    onclick="trackRoll()" 
+                    class="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-colors"
+                >
+                    Buscar
+                </button>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div id="loading" class="hidden text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Buscando informações...</p>
+        </div>
+
+        <!-- Error -->
+        <div id="error" class="hidden bg-red-50 border border-red-200 rounded-lg p-4 mb-6">
+            <div class="flex">
+                <div class="flex-shrink-0">
+                    <svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" />
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <h3 class="text-sm font-medium text-red-800">Erro</h3>
+                    <div class="mt-2 text-sm text-red-700" id="errorMessage"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div id="results" class="hidden">
+            <!-- Roll Info -->
+            <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h2 class="text-2xl font-bold text-gray-900" id="rollNumberTitle"></h2>
+                    <span id="statusBadge" class="px-3 py-1 rounded-full text-sm font-medium"></span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-2">Informações do Item</h3>
+                        <div class="space-y-2 text-gray-800">
+                            <div><span class="font-medium">Item:</span> <span id="itemName"></span></div>
+                            <div><span class="font-medium">Descrição:</span> <span id="description"></span></div>
+                            <div><span class="font-medium">Quantidade:</span> <span id="quantity"></span></div>
+                            <div><span class="font-medium">Peso Inicial:</span> <span id="initialWeight"></span></div>
+                            <div><span class="font-medium">Peso Final:</span> <span id="finalWeight"></span></div>
+                            <div><span class="font-medium">Cliente:</span> <span id="clientName"></span></div>
+                            <div><span class="font-medium">Enviado por:</span> <span id="senderName"></span></div>
+                            <div><span class="font-medium">Expedido por:</span> <span id="dispatchedBy"></span></div>
+                            <div><span class="font-medium">Retorno Previsto:</span> <span id="expectedReturn"></span></div>
+                            <div><span class="font-medium">Local Atual:</span> <span id="currentLocation"></span></div>
+                        </div>
+                    </div>
+                    <div>
+                        <h3 class="font-semibold text-gray-900 mb-2">QR Code</h3>
+                        <div class="text-center">
+                            <canvas id="qrcode" class="mx-auto"></canvas>
+                            <p class="text-sm text-gray-500 mt-2">Compartilhe este QR Code</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div id="itemPhotoBox" class="hidden">
+                        <h4 class="font-semibold text-gray-900 mb-2">Foto do Item</h4>
+                        <img id="itemPhoto" src="" alt="Foto do item" class="w-full h-48 object-cover rounded-lg border" loading="lazy">
+                    </div>
+                    <div id="receivedPhotoBox" class="hidden">
+                        <h4 class="font-semibold text-gray-900 mb-2">Foto do Recebimento</h4>
+                        <img id="receivedPhoto" src="" alt="Foto do recebimento" class="w-full h-48 object-cover rounded-lg border" loading="lazy">
+                    </div>
+                    <div id="dispatchedPhotoBox" class="hidden">
+                        <h4 class="font-semibold text-gray-900 mb-2">Foto da Expedição</h4>
+                        <img id="dispatchedPhoto" src="" alt="Foto da expedição" class="w-full h-48 object-cover rounded-lg border" loading="lazy">
+                    </div>
+                </div>
+
+                <div id="qualityBox" class="hidden mt-6">
+                    <h3 class="font-semibold text-gray-900 mb-2">Controle de Qualidade</h3>
+                    <div id="qualityNotes" class="text-gray-700 bg-yellow-50 border border-yellow-200 rounded-lg p-3"></div>
+                </div>
+            </div>
+
+            <!-- Timeline -->
+            <div class="bg-white rounded-lg shadow-md p-6">
+                <h3 class="text-xl font-bold text-gray-900 mb-4">Histórico de Eventos</h3>
+                <div id="timeline" class="space-y-4"></div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="text-center mt-8 text-gray-500 text-sm">
+            <p>&copy; 2025 ECOLAV - Sistema de Gestão de Lavanderia</p>
+        </div>
+    </div>
+
+    <script>
+        const STATUS_LABELS = {
+            received: 'Recebido',
+            washing: 'Lavagem',
+            drying: 'Secagem',
+            quality_check: 'Controle de Qualidade',
+            ready: 'Pronto',
+            dispatched: 'Expedido',
+            returned: 'Devolvido',
+            cancelled: 'Cancelado'
+        };
+
+        const STATUS_COLORS = {
+            received: 'bg-blue-100 text-blue-800',
+            washing: 'bg-yellow-100 text-yellow-800',
+            drying: 'bg-orange-100 text-orange-800',
+            quality_check: 'bg-purple-100 text-purple-800',
+            ready: 'bg-green-100 text-green-800',
+            dispatched: 'bg-indigo-100 text-indigo-800',
+            returned: 'bg-emerald-100 text-emerald-800',
+            cancelled: 'bg-red-100 text-red-800'
+        };
+
+        async function trackRoll() {
+            const rollNumber = document.getElementById('rollNumber').value.trim();
+            if (!rollNumber) {
+                showError('Por favor, digite o número do ROL');
+                return;
+            }
+
+            showLoading();
+            hideError();
+            hideResults();
+
+            try {
+                const response = await fetch(`/api/public/special-rolls/track/${encodeURIComponent(rollNumber)}`);
+                
+                if (!response.ok) {
+                    if (response.status === 404) {
+                        throw new Error('ROL não encontrado. Verifique o número digitado.');
+                    } else {
+                        throw new Error('Erro ao buscar informações do ROL.');
+                    }
+                }
+
+                const data = await response.json();
+                showResults(data);
+            } catch (error) {
+                showError(error.message);
+            } finally {
+                hideLoading();
+            }
+        }
+
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+
+        function showError(message) {
+            document.getElementById('errorMessage').textContent = message;
+            document.getElementById('error').classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('error').classList.add('hidden');
+        }
+
+        function showResults(data) {
+            const { roll, events } = data;
+
+            // Update roll info
+            document.getElementById('rollNumberTitle').textContent = roll.number;
+            document.getElementById('itemName').textContent = roll.itemName;
+            document.getElementById('description').textContent = roll.description || 'Não informado';
+            document.getElementById('quantity').textContent = roll.quantity ?? 'Não informado';
+            document.getElementById('initialWeight').textContent = (roll.weight ? `${roll.weight} kg` : 'Não informado');
+            document.getElementById('finalWeight').textContent = (roll.finalWeight ? `${roll.finalWeight} kg` : 'Não informado');
+            document.getElementById('clientName').textContent = (roll.client && roll.client.name) ? roll.client.name : 'Não informado';
+            document.getElementById('senderName').textContent = roll.senderName || 'Não informado';
+            document.getElementById('dispatchedBy').textContent = roll.dispatchedBy || 'Não informado';
+            document.getElementById('expectedReturn').textContent = roll.expectedReturnAt 
+                ? new Date(roll.expectedReturnAt).toLocaleDateString('pt-BR') 
+                : 'Não definido';
+            document.getElementById('currentLocation').textContent = roll.currentLocation || 'Não informado';
+
+            // Update status badge
+            const statusBadge = document.getElementById('statusBadge');
+            statusBadge.textContent = STATUS_LABELS[roll.status] || roll.status;
+            statusBadge.className = `px-3 py-1 rounded-full text-sm font-medium ${STATUS_COLORS[roll.status] || 'bg-gray-100 text-gray-800'}`;
+
+            // Generate QR Code (with guard if library failed to load)
+            const qrCanvas = document.getElementById('qrcode');
+            const qrUrl = `${window.location.origin}/track.html?roll=${encodeURIComponent(roll.number)}`;
+            if (qrCanvas) {
+                if (window.QRCode && typeof window.QRCode.toCanvas === 'function') {
+                    // API moderna (qrcode)
+                    window.QRCode.toCanvas(qrCanvas, qrUrl, { width: 150 }, function (error) {
+                        if (error) console.error('Erro ao gerar QR Code:', error);
+                    });
+                } else if (window.QRCode && typeof window.QRCode === 'function') {
+                    // Fallback qrcodejs (instancia via construtor)
+                    try {
+                        // Troca canvas por div para qrcodejs
+                        const parent = qrCanvas.parentElement;
+                        const div = document.createElement('div');
+                        parent.replaceChild(div, qrCanvas);
+                        new window.QRCode(div, { text: qrUrl, width: 150, height: 150 });
+                    } catch (e) {
+                        console.error('Erro ao gerar QR Code (fallback):', e);
+                    }
+                } else {
+                    console.warn('Biblioteca de QRCode não carregada.');
+                }
+            }
+
+            // Photos
+            const base = (path) => `${window.location.origin.replace(/\/$/, '')}/uploads/${path}`;
+            const itemPhotoBox = document.getElementById('itemPhotoBox');
+            const receivedPhotoBox = document.getElementById('receivedPhotoBox');
+            const dispatchedPhotoBox = document.getElementById('dispatchedPhotoBox');
+            if (roll.attachments) {
+                document.getElementById('itemPhoto').src = base(roll.attachments);
+                itemPhotoBox.classList.remove('hidden');
+            } else {
+                itemPhotoBox.classList.add('hidden');
+            }
+            if (roll.receivedPhoto) {
+                document.getElementById('receivedPhoto').src = base(roll.receivedPhoto);
+                receivedPhotoBox.classList.remove('hidden');
+            } else {
+                receivedPhotoBox.classList.add('hidden');
+            }
+            if (roll.dispatchedPhoto) {
+                document.getElementById('dispatchedPhoto').src = base(roll.dispatchedPhoto);
+                dispatchedPhotoBox.classList.remove('hidden');
+            } else {
+                dispatchedPhotoBox.classList.add('hidden');
+            }
+
+            // Quality notes
+            const qualityBox = document.getElementById('qualityBox');
+            const qualityNotes = document.getElementById('qualityNotes');
+            if (roll.qualityNotes) {
+                qualityNotes.textContent = roll.qualityNotes;
+                qualityBox.classList.remove('hidden');
+            } else {
+                qualityBox.classList.add('hidden');
+            }
+
+            // Update timeline
+            const timeline = document.getElementById('timeline');
+            if (events.length > 0) {
+                timeline.innerHTML = events.map((event, index) => `
+                    <div class="flex gap-4 p-4 bg-gray-50 rounded-lg">
+                        <div class="flex-shrink-0">
+                            <div class="w-4 h-4 rounded-full ${index === events.length - 1 ? 'bg-green-500' : 'bg-gray-300'}"></div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center gap-2 mb-1">
+                                <span class="px-2 py-1 rounded text-xs font-medium ${STATUS_COLORS[event.eventType] || 'bg-gray-100 text-gray-800'}">
+                                    ${STATUS_LABELS[event.eventType] || event.eventType}
+                                </span>
+                                <span class="text-xs text-gray-500">
+                                    ${new Date(event.timestamp).toLocaleString('pt-BR')}
+                                </span>
+                            </div>
+                            ${event.note ? `<p class="text-sm text-gray-600">${event.note}</p>` : ''}
+                            ${event.location ? `<div class="text-xs text-gray-500 mt-1">📍 ${event.location}</div>` : ''}
+                        </div>
+                    </div>
+                `).join('');
+            } else {
+                timeline.innerHTML = '<div class="text-center py-8 text-gray-500">Nenhum evento registrado ainda</div>';
+            }
+
+            document.getElementById('results').classList.remove('hidden');
+        }
+
+        function hideResults() {
+            document.getElementById('results').classList.add('hidden');
+        }
+
+        // Check for roll number in URL
+        window.addEventListener('load', function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const rollNumber = urlParams.get('roll');
+            if (rollNumber) {
+                document.getElementById('rollNumber').value = rollNumber;
+                trackRoll();
+            }
+        });
+
+        // Allow Enter key to search
+        document.getElementById('rollNumber').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                trackRoll();
+            }
+        });
+    </script>
+</body>
+</html>

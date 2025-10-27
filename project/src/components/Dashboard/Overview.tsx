@@ -13,6 +13,7 @@ import {
 import { useAuth } from '../../contexts/AuthContext';
 import { getApiBaseUrl } from '../../config';
 import { SkeletonCard } from '../Skeleton';
+import ClientFilterAlert from '../ClientFilterAlert';
 
 const Overview: React.FC = () => {
   const { sectors, beds, linenItems, orders, adminClientIdFilter } = useApp();
@@ -61,6 +62,9 @@ const Overview: React.FC = () => {
   // Monthly weights for dashboard quick cards
   const [loadingWeights, setLoadingWeights] = useState(false);
   const [weights, setWeights] = useState<{ suja: number; limpa: number; diff: number; perc: number }>({ suja: 0, limpa: 0, diff: 0, perc: 0 });
+  const [loadingAlerts, setLoadingAlerts] = useState(false);
+  const [overdueCount, setOverdueCount] = useState(0);
+  const [rollsPendingCount, setRollsPendingCount] = useState(0);
   const monthRange = useMemo(() => {
     const d = new Date();
     const y = d.getFullYear();
@@ -93,8 +97,46 @@ const Overview: React.FC = () => {
 
   useEffect(() => { fetchMonthlyWeights(); }, [fetchMonthlyWeights]);
 
+  // Fetch alerts: items >24h in bed and pending special rolls
+  const fetchAlerts = useCallback(async () => {
+    setLoadingAlerts(true);
+    try {
+      // Distributed items
+      const urlItems = new URL(`${api}/distributed-items`);
+      if (user?.role === 'admin' && adminClientIdFilter) urlItems.searchParams.set('clientId', adminClientIdFilter);
+      const [resItems, resRollsReady, resRollsReceived, resRollsWashing, resRollsDrying, resRollsQC] = await Promise.all([
+        fetch(urlItems.toString(), { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${api}/special-rolls?status=ready&page=1&pageSize=1${user?.role === 'admin' && adminClientIdFilter ? `&clientId=${encodeURIComponent(adminClientIdFilter)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${api}/special-rolls?status=received&page=1&pageSize=1${user?.role === 'admin' && adminClientIdFilter ? `&clientId=${encodeURIComponent(adminClientIdFilter)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${api}/special-rolls?status=washing&page=1&pageSize=1${user?.role === 'admin' && adminClientIdFilter ? `&clientId=${encodeURIComponent(adminClientIdFilter)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${api}/special-rolls?status=drying&page=1&pageSize=1${user?.role === 'admin' && adminClientIdFilter ? `&clientId=${encodeURIComponent(adminClientIdFilter)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${api}/special-rolls?status=quality_check&page=1&pageSize=1${user?.role === 'admin' && adminClientIdFilter ? `&clientId=${encodeURIComponent(adminClientIdFilter)}` : ''}`, { headers: { Authorization: `Bearer ${token}` } })
+      ]);
+
+      let overdue = 0;
+      if (resItems.ok) {
+        const items = await resItems.json();
+        const now = Date.now();
+        overdue = (items as Array<{ allocatedAt: string; status: string }>).filter(it => it.status !== 'collected' && (now - new Date(it.allocatedAt).getTime()) >= 24 * 60 * 60 * 1000).length;
+      }
+
+      const getTotal = async (res: Response) => (res.ok ? Number((await res.json())?.total || 0) : 0);
+      const [tReady, tReceived, tWashing, tDrying, tQC] = await Promise.all([
+        getTotal(resRollsReady), getTotal(resRollsReceived), getTotal(resRollsWashing), getTotal(resRollsDrying), getTotal(resRollsQC)
+      ]);
+      setOverdueCount(overdue);
+      setRollsPendingCount(tReady + tReceived + tWashing + tDrying + tQC);
+    } finally {
+      setLoadingAlerts(false);
+    }
+  }, [api, adminClientIdFilter, token, user?.role]);
+
+  useEffect(() => { fetchAlerts(); }, [fetchAlerts]);
+
   return (
     <div className="space-y-8">
+      <ClientFilterAlert />
+      
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Visão Geral</h2>
         <p className="text-gray-600">Dashboard do sistema de gestão de enxoval</p>
@@ -133,6 +175,9 @@ const Overview: React.FC = () => {
           </div>
           
                      <div className="space-y-2 sm:space-y-3">
+            {loadingAlerts && (
+              <div className="text-xs text-gray-500">Carregando alertas...</div>
+            )}
              {lowStockItems > 0 ? (
                <div className="flex items-center justify-between p-2 sm:p-3 bg-red-50 rounded-lg border border-red-100">
                  <div>
@@ -145,6 +190,15 @@ const Overview: React.FC = () => {
                </div>
              ) : null}
 
+            {overdueCount > 0 ? (
+              <div className="flex items-center justify-between p-2 sm:p-3 bg-red-50 rounded-lg border border-red-100">
+                <div>
+                  <p className="font-medium text-red-900 text-sm sm:text-base">Peças &gt; 24h no leito</p>
+                  <p className="text-xs sm:text-sm text-red-700">{overdueCount} peças aguardando coleta</p>
+                </div>
+              </div>
+            ) : null}
+
              {pendingOrders > 0 ? (
                <div className="flex items-center justify-between p-2 sm:p-3 bg-yellow-50 rounded-lg border border-yellow-100">
                  <div>
@@ -156,6 +210,15 @@ const Overview: React.FC = () => {
                  </div>
                </div>
              ) : null}
+
+            {rollsPendingCount > 0 ? (
+              <div className="flex items-center justify-between p-2 sm:p-3 bg-blue-50 rounded-lg border border-blue-100">
+                <div>
+                  <p className="font-medium text-blue-900 text-sm sm:text-base">ROLs Especiais Pendentes</p>
+                  <p className="text-xs sm:text-sm text-blue-700">{rollsPendingCount} em andamento/aguardando</p>
+                </div>
+              </div>
+            ) : null}
 
              {lowStockItems === 0 && pendingOrders === 0 ? (
                <div className="text-center py-6 sm:py-8 text-gray-500">

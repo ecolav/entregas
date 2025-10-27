@@ -12,6 +12,7 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
   const [receiverName, setReceiverName] = useState('');
   const [mode, setMode] = useState<'signature' | 'photo'>('signature');
   const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreviewUrl, setPhotoPreviewUrl] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const drawing = useRef(false);
@@ -21,6 +22,7 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
     if (open) {
       setReceiverName('');
       setPhotoFile(null);
+      if (photoPreviewUrl) { URL.revokeObjectURL(photoPreviewUrl); setPhotoPreviewUrl(null); }
       setMode('signature');
       const canvas = canvasRef.current;
       if (canvas) {
@@ -32,6 +34,11 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
       }
     }
   }, [open]);
+
+  useEffect(() => {
+    return () => { if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl); };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleStart = (e: React.MouseEvent | React.TouchEvent) => {
     drawing.current = true;
@@ -127,7 +134,30 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
             </div>
           ) : (
             <div>
-              <input type="file" accept="image/*" onChange={(e)=>setPhotoFile(e.target.files?.[0]||null)} className="block w-full text-sm" />
+              <input
+                type="file"
+                accept="image/*"
+                onChange={async (e)=>{
+                  const f = e.target.files?.[0] || null;
+                  if (!f) { setPhotoFile(null); if (photoPreviewUrl) { URL.revokeObjectURL(photoPreviewUrl); setPhotoPreviewUrl(null);} return; }
+                  if (f.size > 20 * 1024 * 1024) { addToast({ type:'error', message:'Imagem muito grande (limite 20MB).'}); return; }
+                  const cf = await compressImageSafely(f, 1280, 0.8);
+                  setPhotoFile(cf);
+                  if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl);
+                  setPhotoPreviewUrl(URL.createObjectURL(cf));
+                }}
+                className="block w-full text-sm"
+              />
+              {photoPreviewUrl && (
+                <div className="mt-2">
+                  <img src={photoPreviewUrl} alt="Preview" className="w-full max-h-48 object-cover rounded border" />
+                  <button
+                    type="button"
+                    onClick={() => { if (photoPreviewUrl) URL.revokeObjectURL(photoPreviewUrl); setPhotoPreviewUrl(null); setPhotoFile(null);} }
+                    className="mt-1 text-xs text-red-600 hover:text-red-800"
+                  >Remover foto</button>
+                </div>
+              )}
             </div>
           )}
 
@@ -152,3 +182,27 @@ const ConfirmDeliveryModal: React.FC<ConfirmDeliveryModalProps> = ({ open, onClo
 export default ConfirmDeliveryModal;
 
 
+// Utilitário compartilhado com SpecialRolls: compressão segura de imagem
+async function compressImageSafely(file: File, maxDim: number, quality: number): Promise<File> {
+  try {
+    if (!file.type.startsWith('image/')) return file;
+    const bitmap = await createImageBitmap(file).catch(() => null);
+    if (!bitmap) return file;
+    let { width, height } = bitmap;
+    if (width <= maxDim && height <= maxDim) return file;
+    const ratio = width > height ? maxDim / width : maxDim / height;
+    const targetW = Math.round(width * ratio);
+    const targetH = Math.round(height * ratio);
+    const canvas = document.createElement('canvas');
+    canvas.width = targetW;
+    canvas.height = targetH;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return file;
+    ctx.drawImage(bitmap, 0, 0, targetW, targetH);
+    const mime = file.type === 'image/png' ? 'image/png' : 'image/jpeg';
+    const blob: Blob = await new Promise(resolve => canvas.toBlob(b => resolve(b || file), mime, quality));
+    return new File([blob], file.name.replace(/\.(png|jpg|jpeg|webp)$/i, mime === 'image/png' ? '.png' : '.jpg'), { type: blob.type });
+  } catch {
+    return file;
+  }
+}

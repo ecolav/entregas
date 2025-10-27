@@ -23,6 +23,7 @@ model Client {
   stockMovements  StockMovement[]
   weighingControls WeighingControl[]
   distributedItems DistributedItem[]
+  specialRolls    SpecialRoll[]
 }
 
 model Sector {
@@ -64,6 +65,7 @@ model LinenItem {
   stockMovements StockMovement[]
   orderItems     OrderItem[]
   distributedItems DistributedItem[]
+  specialRolls   SpecialRoll[]
 }
 
 model OrderItem {
@@ -178,5 +180,53 @@ model WeighingEntry {
   totalWeight Decimal  @db.Decimal(10, 2)
   netWeight   Decimal  @db.Decimal(10, 2)
   createdAt   DateTime @default(now())
+}
+
+// Special ROL tracking
+model SpecialRoll {
+  id              String   @id @default(cuid())
+  number          String   @unique
+  itemName        String
+  description     String?
+  quantity        Int?
+  weight          String?
+  expectedReturnAt DateTime?
+  status          String   @default("received")
+  currentLocation String?
+  priority        Int?
+  attachments     String?
+  senderName      String?
+  qualityNotes    String?
+  receivedPhoto   String?
+  finalWeight     String?
+  dispatchedPhoto String?
+  dispatchedBy    String?
+  updatedBy       String?
+  updatedAt       DateTime?
+  createdAt       DateTime @default(now())
+
+  clientId        String?
+  client          Client?  @relation(fields: [clientId], references: [id])
+
+  linenItemId     String?
+  linenItem       LinenItem? @relation(fields: [linenItemId], references: [id])
+
+  events          SpecialRollEvent[]
+
+  @@map("specialroll")
+}
+
+model SpecialRollEvent {
+  id        String   @id @default(cuid())
+  rollId    String
+  roll      SpecialRoll @relation(fields: [rollId], references: [id])
+  eventType String
+  note      String?
+  location  String?
+  userId    String?
+  details   String?
+  timestamp DateTime @default(now()) @map("timestamp")
+
+  @@map("specialrollevent")
 }
 

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 
-type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'distribution' | 'reports' | 'clients' | 'users';
+type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'linen-distribution' | 'distribution' | 'reports' | 'clients' | 'users' | 'special-rolls';
 
 interface MenuItem {
   id: ActiveSection;
@@ -50,7 +50,9 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
       { id: 'stock', label: 'Estoque', icon: <BarChart3 className="w-5 h-5" /> },
       { id: 'weight', label: 'Pesagem', icon: <Scale className="w-5 h-5" /> },
       { id: 'weight-tracking', label: 'Acompanhamento', icon: <CalendarDays className="w-5 h-5" /> },
-      { id: 'distribution', label: 'Gestão de Enxoval', icon: <CalendarDays className="w-5 h-5" /> },
+      { id: 'linen-distribution', label: 'Gestão de Enxoval', icon: <CalendarDays className="w-5 h-5" /> },
+      { id: 'distribution', label: 'Distribuição', icon: <CalendarDays className="w-5 h-5" /> },
+      { id: 'special-rolls', label: 'ROL Especial', icon: <Package className="w-5 h-5" /> },
       { id: 'reports', label: 'Relatórios', icon: <TrendingUp className="w-5 h-5" /> },
     ];
     if (user?.role === 'admin') {
@@ -149,7 +151,7 @@ const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
                    </div>
                    <h4 className="text-xl font-bold text-gray-900 mb-2">Sistema de Gestão Ecolav</h4>
                    <div className="bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-sm font-medium inline-block">
-                     Versão Beta 1.1.0
+                     Versão Beta 0.2.0
                    </div>
                    <p className="text-sm text-gray-600 mt-2">
                      Parte do ambiente <span className="font-medium text-blue-600">Ecolav 360</span>

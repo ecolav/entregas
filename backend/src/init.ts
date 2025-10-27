@@ -153,6 +153,36 @@ async function ensureDatabase() {
       CONSTRAINT fk_distributeditem_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
 
+  // Special ROL tables
+  await db.query(`CREATE TABLE IF NOT EXISTS specialroll (
+      id VARCHAR(191) PRIMARY KEY,
+      number VARCHAR(64) NOT NULL UNIQUE,
+      itemName VARCHAR(191) NOT NULL,
+      description TEXT NULL,
+      expectedReturnAt DATETIME NULL,
+      status VARCHAR(32) NOT NULL DEFAULT 'received',
+      currentLocation VARCHAR(191) NULL,
+      priority INT NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      clientId VARCHAR(191) NULL,
+      linenItemId VARCHAR(191) NULL,
+      INDEX (clientId), INDEX (linenItemId), INDEX (status), INDEX (createdAt),
+      CONSTRAINT fk_specialroll_client FOREIGN KEY (clientId) REFERENCES client(id) ON DELETE SET NULL,
+      CONSTRAINT fk_specialroll_item FOREIGN KEY (linenItemId) REFERENCES linenitem(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
+  await db.query(`CREATE TABLE IF NOT EXISTS specialrollevent (
+      id VARCHAR(191) PRIMARY KEY,
+      rollId VARCHAR(191) NOT NULL,
+      eventType VARCHAR(64) NOT NULL,
+      note TEXT NULL,
+      location VARCHAR(191) NULL,
+      userId VARCHAR(191) NULL,
+      createdAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+      INDEX (rollId), INDEX (createdAt),
+      CONSTRAINT fk_specialrollevent_roll FOREIGN KEY (rollId) REFERENCES specialroll(id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;`);
+
   // Ensure missing columns for existing databases
   try {
     await db.query(`SELECT clientId FROM linenitem LIMIT 1;`);

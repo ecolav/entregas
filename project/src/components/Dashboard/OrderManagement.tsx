@@ -3,6 +3,7 @@ import { useApp } from '../../contexts/AppContext';
 import { Search, Filter, Eye, Clock, CheckCircle, XCircle, Package } from 'lucide-react';
 import ConfirmDeliveryModal from '../ConfirmDeliveryModal';
 import { formatDateTimeISOToBR } from '../../utils/date';
+import ClientFilterAlert from '../ClientFilterAlert';
 
 const OrderManagement: React.FC = () => {
   const { orders, updateOrderStatus, deleteOrder, confirmOrderDelivery } = useApp();
@@ -62,6 +63,8 @@ const OrderManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ClientFilterAlert showOnAction />
+      
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Gestão de Pedidos</h2>
         <p className="text-gray-600">Gerencie todos os pedidos de enxoval</p>

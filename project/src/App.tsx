@@ -1,13 +1,14 @@
-import React from 'react';
+﻿import React from 'react';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ToastProvider } from './contexts/ToastContext';
 import ToastContainer from './components/ToastContainer';
-import { AppProvider } from './contexts/AppContext';
+import { AppProvider, useApp } from './contexts/AppContext';
 import { useLocation } from './hooks/useLocation';
 import Login from './components/Login';
 import Dashboard from './components/Dashboard/Dashboard';
 import OrderPage from './components/OrderPage';
 import LoadingSpinner from './components/LoadingSpinner';
+// import ProgressiveLoading from './components/ProgressiveLoading';
 
 const AppContent: React.FC = () => {
   const { user, isLoading } = useAuth();
@@ -42,7 +43,7 @@ const AppContent: React.FC = () => {
     );
   }
 
-  // Show login if not authenticated
+  // Public routes
   if (!user) {
     return <Login />;
   }
@@ -50,9 +51,29 @@ const AppContent: React.FC = () => {
   // Show dashboard if authenticated
   return (
     <AppProvider>
-      <Dashboard />
+      <DashboardWrapper />
     </AppProvider>
   );
+};
+
+// Componente interno para usar useApp e verificar isInitialLoading
+const DashboardWrapper: React.FC = () => {
+  const { isInitialLoading, loadingStep, loadingProgress } = useApp();
+  
+  if (isInitialLoading) {
+    return (
+      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-lg font-semibold text-gray-700">
+            Carregando - {loadingStep || 'carregando...'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+  
+  return <Dashboard />;
 };
 
 const App: React.FC = () => {

@@ -6,6 +6,7 @@ import { getApiBaseUrl } from '../../config';
 import { Cage, WeighingControl, WeighingEntry } from '../../types';
 import { useAuth } from '../../contexts/AuthContext';
 import { Skeleton, SkeletonCard } from '../Skeleton';
+import ClientFilterAlert from '../ClientFilterAlert';
 // duplicate import removed
 type ActiveTab = 'control' | 'cages';
 
@@ -146,10 +147,18 @@ const WeightManagement: React.FC = () => {
 
   const submitEntry = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // ⚠️ PROTEÇÃO: Não permitir múltiplas submissões simultâneas
+    if (loadingEntries) {
+      console.warn('🚫 Bloqueado: Já existe uma pesagem sendo processada');
+      return;
+    }
+    
     if (!currentControl) return;
     const body: { control_id: string; peso_total: number; cage_id?: string; peso_tara?: number } = { control_id: currentControl.id, peso_total: Number(entryForm.total) };
     if (entryForm.cageIdOrManual === 'cage') body.cage_id = entryForm.cageId;
     else body.peso_tara = Number(entryForm.tare || 0);
+    
     setLoadingEntries(true);
     try {
       const res = await fetch(`${api}/pesagens`, { method: 'POST', headers: authHeaders as HeadersInit, body: JSON.stringify(body) });
@@ -157,8 +166,16 @@ const WeightManagement: React.FC = () => {
         await refreshControl(currentControl.id);
         setEntryForm({ cageIdOrManual: 'cage', cageId: undefined, tare: '', total: '' });
         addToast({ type: 'success', message: 'Pesagem adicionada!' });
+      } else {
+        const errorData = await res.json().catch(() => ({ error: 'Erro desconhecido' }));
+        addToast({ type: 'error', message: errorData.error || 'Erro ao adicionar pesagem' });
       }
-    } finally { setLoadingEntries(false); }
+    } catch (error) {
+      console.error('Erro ao adicionar pesagem:', error);
+      addToast({ type: 'error', message: 'Erro de conexão ao adicionar pesagem' });
+    } finally { 
+      setLoadingEntries(false); 
+    }
   };
 
   useEffect(() => { fetchCages(); }, [fetchCages]);
@@ -171,6 +188,8 @@ const WeightManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ClientFilterAlert showOnAction />
+      
       <div className="flex items-center gap-2 sm:gap-3">
         <button onClick={() => setActiveTab('control')} className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm ${activeTab==='control'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Controle</button>
         <button onClick={() => setActiveTab('cages')} className={`px-2 sm:px-3 py-2 rounded-lg text-xs sm:text-sm ${activeTab==='cages'?'bg-blue-600 text-white':'bg-gray-100 text-gray-700'}`}>Gaiolas</button>
@@ -309,29 +328,29 @@ const WeightManagement: React.FC = () => {
 
               <div className="bg-white rounded-xl p-6 border space-y-4">
                 <h3 className="font-semibold">Adicionar Pesagem</h3>
-                <form onSubmit={submitEntry} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end opacity-100">
+                <form onSubmit={submitEntry} className="grid grid-cols-1 md:grid-cols-5 gap-3 items-end opacity-100" onKeyDown={(e) => { if (e.key === 'Enter' && loadingEntries) { e.preventDefault(); console.warn('🚫 Bloqueado: Aguarde o processamento'); } }}>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Tara</label>
                     <div className="flex gap-2">
-                      <select value={entryForm.cageIdOrManual} onChange={(e)=>setEntryForm(v=>({...v, cageIdOrManual: e.target.value as 'cage'|'manual'}))} className="px-2 py-2 border rounded-lg">
+                      <select value={entryForm.cageIdOrManual} onChange={(e)=>setEntryForm(v=>({...v, cageIdOrManual: e.target.value as 'cage'|'manual'}))} className="px-2 py-2 border rounded-lg" disabled={loadingEntries}>
                         <option value="cage">Gaiola</option>
                         <option value="manual">Manual</option>
                       </select>
                       {entryForm.cageIdOrManual === 'cage' ? (
-                        <select value={entryForm.cageId || ''} onChange={(e)=>setEntryForm(v=>({...v, cageId: e.target.value || undefined}))} className="flex-1 px-2 py-2 border rounded-lg">
+                        <select value={entryForm.cageId || ''} onChange={(e)=>setEntryForm(v=>({...v, cageId: e.target.value || undefined}))} className="flex-1 px-2 py-2 border rounded-lg" disabled={loadingEntries}>
                           <option value="">Selecione a gaiola</option>
                           {cages.map(c => (
                             <option key={c.id} value={c.id}>{c.barcode} — {c.tareWeight} kg</option>
                           ))}
                         </select>
                       ) : (
-                        <input type="number" step="0.01" min="0" placeholder="Tara (kg)" value={entryForm.tare} onChange={(e)=>setEntryForm(v=>({...v, tare: e.target.value}))} className="flex-1 px-3 py-2 border rounded-lg" />
+                        <input type="number" step="0.01" min="0" placeholder="Tara (kg)" value={entryForm.tare} onChange={(e)=>setEntryForm(v=>({...v, tare: e.target.value}))} className="flex-1 px-3 py-2 border rounded-lg" disabled={loadingEntries} />
                       )}
                     </div>
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Peso Total (kg)</label>
-                    <input type="number" step="0.01" min="0" value={entryForm.total} onChange={(e)=>setEntryForm(v=>({...v, total: e.target.value}))} className="w-full px-3 py-2 border rounded-lg" required />
+                    <input type="number" step="0.01" min="0" value={entryForm.total} onChange={(e)=>setEntryForm(v=>({...v, total: e.target.value}))} className="w-full px-3 py-2 border rounded-lg" required disabled={loadingEntries} />
                   </div>
                   <button type="submit" disabled={loadingEntries} className={`px-4 py-2 rounded-lg text-white ${loadingEntries ? 'bg-blue-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'}`}>
                     {loadingEntries ? 'Adicionando...' : 'Adicionar'}

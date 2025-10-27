@@ -12,6 +12,7 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   useEffect(() => {
     const checkAuth = async () => {
       const token = localStorage.getItem('token');
+      
       if (!token) {
         setIsLoading(false);
         return;

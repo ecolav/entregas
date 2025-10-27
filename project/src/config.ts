@@ -6,16 +6,16 @@ export function getApiBaseUrl(): string {
   if (envUrl && envUrl.length > 0) return envUrl;
 
   if (typeof window !== 'undefined' && window.location?.origin) {
-    // Se estiver rodando na porta 5173 (frontend), usar porta 4000 (backend)
+    // Se estiver rodando na porta 5173 (frontend), usar porta 3000 (backend)
     const origin = window.location.origin;
     if (origin.includes(':5173')) {
-      return origin.replace(':5173', ':4000');
+      return origin.replace(':5173', ':3000');
     }
     // Produção: usar prefixo /api via Nginx
     return `${origin}/api`;
   }
 
-  return 'http://localhost:4000';
+  return 'http://localhost:3000';
 }
 
 // Public APP base URL to embed in QR codes and external links

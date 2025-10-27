@@ -1,20 +1,67 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useApp } from '../../contexts/AppContext';
 import { useAuth } from '../../contexts/AuthContext';
 import { BarChart3, TrendingUp, Download, Package, Bed, FileText, MessageCircle } from 'lucide-react';
 import { buildWhatsAppUrl } from '../../utils/whatsapp';
+import ClientFilterAlert from '../ClientFilterAlert';
+import { getApiBaseUrl } from '../../config';
+
+interface DistributedItem {
+  id: string;
+  linenItemId: string;
+  bedId: string;
+  status: string;
+  allocatedAt: string;
+  bed?: { id: string; number: string; sectorId: string; sector?: { id: string; name: string; clientId?: string } };
+  linenItem?: { id: string; name: string };
+}
 
 const Reports: React.FC = () => {
-  const { orders, sectors, clients } = useApp();
+  const { orders, sectors, clients, linenItems, beds } = useApp();
   const { user } = useAuth();
   const [dateRange, setDateRange] = useState({ start: '', end: '' });
   const [selectedSector, setSelectedSector] = useState('all');
   const [selectedClientId, setSelectedClientId] = useState('all');
+  const [distributedItems, setDistributedItems] = useState<DistributedItem[]>([]);
+  const api = getApiBaseUrl();
+  const token = localStorage.getItem('token') || '';
+
+  // Buscar distributed-items
+  const fetchDistributedItems = useCallback(async () => {
+    try {
+      const url = new URL(`${api}/distributed-items`);
+      if (user?.role === 'admin' && selectedClientId !== 'all') {
+        url.searchParams.set('clientId', selectedClientId);
+      }
+      const res = await fetch(url.toString(), { headers: { Authorization: `Bearer ${token}` } });
+      if (res.ok) {
+        const data = await res.json();
+        // Enriquecer com dados de bed e item
+        const enriched = data.map((di: any) => {
+          const bed = beds.find(b => b.id === di.bedId);
+          const item = linenItems.find(i => i.id === di.linenItemId);
+          return {
+            ...di,
+            bed: bed ? { ...bed, sector: sectors.find(s => s.id === bed.sectorId) } : undefined,
+            linenItem: item
+          };
+        });
+        setDistributedItems(enriched);
+      }
+    } catch (err) {
+      console.error('Erro ao buscar distributed-items:', err);
+    }
+  }, [api, token, user?.role, selectedClientId, beds, linenItems, sectors]);
+
+  useEffect(() => {
+    fetchDistributedItems();
+  }, [fetchDistributedItems]);
 
   // Calculate report data
   const visibleClientId = user?.role === 'admin' ? (selectedClientId === 'all' ? undefined : selectedClientId) : user?.clientId;
 
   const reportData = useMemo(() => {
+    // Filtrar pedidos
     const filteredOrders = orders.filter(order => {
       const orderDate = new Date(order.createdAt);
       const matchesDateRange = !dateRange.start || !dateRange.end || 
@@ -25,9 +72,21 @@ const Reports: React.FC = () => {
       return matchesDateRange && matchesSector && matchesClient;
     });
 
-    // Items consumption
+    // Filtrar distribuições diretas
+    const filteredDistributions = distributedItems.filter(dist => {
+      const distDate = new Date(dist.allocatedAt);
+      const matchesDateRange = !dateRange.start || !dateRange.end || 
+        (distDate >= new Date(dateRange.start) && distDate <= new Date(dateRange.end));
+      const matchesSector = selectedSector === 'all' || dist.bed?.sectorId === selectedSector;
+      const matchesClient = !visibleClientId || dist.bed?.sector?.clientId === visibleClientId;
+      
+      return matchesDateRange && matchesSector && matchesClient;
+    });
+
+    // Items consumption (pedidos + distribuições)
     const itemConsumption: { [key: string]: { name: string; quantity: number; orders: number } } = {};
     
+    // Consumo de pedidos
     filteredOrders.forEach(order => {
       order.items.forEach(orderItem => {
         if (!itemConsumption[orderItem.itemId]) {
@@ -42,9 +101,23 @@ const Reports: React.FC = () => {
       });
     });
 
-    // Sector consumption
+    // Consumo de distribuições diretas
+    filteredDistributions.forEach(dist => {
+      if (!itemConsumption[dist.linenItemId]) {
+        itemConsumption[dist.linenItemId] = {
+          name: dist.linenItem?.name || 'Item desconhecido',
+          quantity: 0,
+          orders: 0
+        };
+      }
+      itemConsumption[dist.linenItemId].quantity += 1; // Cada distributed-item é 1 peça
+      itemConsumption[dist.linenItemId].orders += 1; // Conta como uma "saída"
+    });
+
+    // Sector consumption (pedidos + distribuições)
     const sectorConsumption: { [key: string]: { name: string; orders: number; items: number } } = {};
     
+    // Pedidos por setor
     filteredOrders.forEach(order => {
       const sectorId = order.bed?.sectorId;
       const sectorName = order.bed?.sector?.name || 'Setor desconhecido';
@@ -58,9 +131,24 @@ const Reports: React.FC = () => {
       }
     });
 
-    // Bed consumption
+    // Distribuições por setor
+    filteredDistributions.forEach(dist => {
+      const sectorId = dist.bed?.sectorId;
+      const sectorName = dist.bed?.sector?.name || 'Setor desconhecido';
+      
+      if (sectorId) {
+        if (!sectorConsumption[sectorId]) {
+          sectorConsumption[sectorId] = { name: sectorName, orders: 0, items: 0 };
+        }
+        sectorConsumption[sectorId].orders += 1;
+        sectorConsumption[sectorId].items += 1;
+      }
+    });
+
+    // Bed consumption (pedidos + distribuições)
     const bedConsumption: { [key: string]: { bed: string; sector: string; orders: number; items: number } } = {};
     
+    // Pedidos por leito
     filteredOrders.forEach(order => {
       const bedKey = `${order.bed?.sectorId}-${order.bed?.number}`;
       
@@ -76,16 +164,37 @@ const Reports: React.FC = () => {
       bedConsumption[bedKey].items += order.items.reduce((sum, item) => sum + item.quantity, 0);
     });
 
+    // Distribuições por leito
+    filteredDistributions.forEach(dist => {
+      const bedKey = `${dist.bed?.sectorId}-${dist.bed?.number}`;
+      
+      if (!bedConsumption[bedKey]) {
+        bedConsumption[bedKey] = {
+          bed: dist.bed?.number || 'Leito desconhecido',
+          sector: dist.bed?.sector?.name || 'Setor desconhecido',
+          orders: 0,
+          items: 0
+        };
+      }
+      bedConsumption[bedKey].orders += 1;
+      bedConsumption[bedKey].items += 1;
+    });
+
+    // Totais combinados
+    const totalOrders = filteredOrders.length + filteredDistributions.length;
+    const totalItemsFromOrders = filteredOrders.reduce((sum, order) => 
+      sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+    );
+    const totalItemsFromDistributions = filteredDistributions.length; // Cada dist é 1 item
+
     return {
-      totalOrders: filteredOrders.length,
-      totalItems: filteredOrders.reduce((sum, order) => 
-        sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
-      ),
+      totalOrders,
+      totalItems: totalItemsFromOrders + totalItemsFromDistributions,
       itemConsumption: Object.values(itemConsumption).sort((a, b) => b.quantity - a.quantity),
       sectorConsumption: Object.values(sectorConsumption).sort((a, b) => b.orders - a.orders),
       bedConsumption: Object.values(bedConsumption).sort((a, b) => b.orders - a.orders)
     };
-  }, [orders, dateRange, selectedSector, visibleClientId]);
+  }, [orders, distributedItems, dateRange, selectedSector, visibleClientId]);
 
   const exportData = () => {
     const data = {
@@ -194,6 +303,8 @@ const Reports: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <ClientFilterAlert showOnAction />
+      
       <div>
         <h2 className="text-2xl font-bold text-gray-900 mb-2">Relatórios</h2>
         <p className="text-gray-600">Análise de consumo e indicadores de desempenho</p>

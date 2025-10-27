@@ -1,6 +1,6 @@
 {
   "name": "ecolav-backend",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -22,6 +22,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "mysql2": "^3.14.3",
+    "web-push": "^3.6.7",
     "zod": "^3.23.8"
   },
   "devDependencies": {
@@ -32,6 +33,7 @@
     "@types/morgan": "^1.9.7",
     "@types/multer": "^1.4.11",
     "@types/node": "^20.11.30",
+    "@types/web-push": "^3.6.4",
     "prisma": "^5.18.0",
     "ts-node-dev": "^2.0.0",
     "typescript": "^5.5.4"

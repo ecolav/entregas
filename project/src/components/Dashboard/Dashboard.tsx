@@ -10,12 +10,14 @@ import OrderManagement from './OrderManagement';
 import StockManagement from './StockManagement';
 import WeightManagement from './WeightManagement';
 import LinenDistribution from './LinenDistribution';
+import Distribution from '../Distribution';
 import Reports from './Reports';
 import WeightTracking from './WeightTracking';
 import ClientManagement from './ClientManagement';
 import UserManagement from './UserManagement';
+import SpecialRolls from './SpecialRolls';
 
-type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'distribution' | 'reports' | 'clients' | 'users';
+type ActiveSection = 'overview' | 'sectors' | 'beds' | 'linen' | 'orders' | 'stock' | 'weight' | 'weight-tracking' | 'linen-distribution' | 'distribution' | 'reports' | 'clients' | 'users' | 'special-rolls';
 
 const Dashboard: React.FC = () => {
   const [activeSection, setActiveSection] = useState<ActiveSection>('overview');
@@ -40,14 +42,18 @@ const Dashboard: React.FC = () => {
         return <WeightManagement />;
       case 'weight-tracking':
         return <WeightTracking />;
-      case 'distribution':
+      case 'linen-distribution':
         return <LinenDistribution />;
+      case 'distribution':
+        return <Distribution />;
       case 'reports':
         return <Reports />;
       case 'clients':
         return <ClientManagement />;
       case 'users':
         return <UserManagement />;
+      case 'special-rolls':
+        return <SpecialRolls />;
       default:
         return <Overview />;
     }
