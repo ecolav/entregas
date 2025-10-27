@@ -37,7 +37,7 @@ const Reports: React.FC = () => {
       if (res.ok) {
         const data = await res.json();
         // Enriquecer com dados de bed e item
-        const enriched = data.map((di: any) => {
+        const enriched = data.map((di: DistributedItem) => {
           const bed = beds.find(b => b.id === di.bedId);
           const item = linenItems.find(i => i.id === di.linenItemId);
           return {

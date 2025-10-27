@@ -292,7 +292,7 @@ const SpecialRolls: React.FC = () => {
       if (!file.type.startsWith('image/')) return file;
       const bitmap = await createImageBitmap(file).catch(() => null);
       if (!bitmap) return file;
-      let { width, height } = bitmap;
+      const { width, height } = bitmap;
       if (width <= maxDim && height <= maxDim) return file;
       const ratio = width > height ? maxDim / width : maxDim / height;
       const targetW = Math.round(width * ratio);
@@ -359,7 +359,7 @@ const SpecialRolls: React.FC = () => {
       const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lon)}&accept-language=pt-BR&addressdetails=1`;
       const res = await fetch(url, { headers: { 'User-Agent': 'Ecolav/0.2.0 (ti@textilecolav.com.br)' } });
       if (!res.ok) return null;
-      const j: any = await res.json();
+      const j: { address?: { road?: string; house_number?: string; suburb?: string; neighbourhood?: string; city?: string; town?: string; village?: string; state?: string; postcode?: string } } = await res.json();
       const a = j?.address || {};
       const parts = [a.road, a.house_number, a.suburb || a.neighbourhood, a.city || a.town || a.village, a.state, a.postcode]
         .filter(Boolean)
@@ -1372,7 +1372,7 @@ const SpecialRolls: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  onClick={(e)=>{ if (!isReceivedSubmitting) handleReceivedSubmit(e as any); }}
+                  onClick={(e)=>{ if (!isReceivedSubmitting) handleReceivedSubmit(e as React.MouseEvent<HTMLButtonElement>); }}
                   disabled={isReceivedSubmitting}
                   className="flex-1 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50"
                 >
@@ -1508,7 +1508,7 @@ const SpecialRolls: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  onClick={(e)=>{ if (!isDispatchedSubmitting) handleDispatchedSubmit(e as any); }}
+                  onClick={(e)=>{ if (!isDispatchedSubmitting) handleDispatchedSubmit(e as React.MouseEvent<HTMLButtonElement>); }}
                   disabled={isDispatchedSubmitting}
                   className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
                 >

@@ -9,7 +9,7 @@ type Tab = 'manual' | 'rfid';
 
 const Distribution: React.FC = () => {
   const { user } = useAuth();
-  const { sectors, beds, linenItems, adminClientIdFilter, addStockMovement, getOrCreateVirtualSectorBed } = useApp();
+  const { sectors, beds, linenItems, getOrCreateVirtualSectorBed } = useApp();
   const { addToast } = useToast();
   const api = getApiBaseUrl();
   const token = typeof window !== 'undefined' ? (localStorage.getItem('token') || '') : '';
@@ -92,7 +92,7 @@ const Distribution: React.FC = () => {
 
       addToast({ type: 'success', message: 'Distribuição realizada com sucesso.' });
       setQuantity(1);
-    } catch (err) {
+    } catch {
       addToast({ type: 'error', message: 'Falha ao distribuir. Tente novamente.' });
     } finally {
       setIsSubmitting(false);

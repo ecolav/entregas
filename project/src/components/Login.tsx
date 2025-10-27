@@ -10,7 +10,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
-  const { isLoading, user, login: authLogin } = useAuth();
+  const { login: authLogin } = useAuth();
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
@@ -55,7 +55,7 @@ const Login: React.FC = () => {
         setError('Email ou senha incorretos.');
         setShake(true); setTimeout(() => setShake(false), 300);
       }
-    } catch (err) {
+    } catch {
       setError('Falha na conexão. Tente novamente.');
       setShake(true); setTimeout(() => setShake(false), 300);
     } finally {
