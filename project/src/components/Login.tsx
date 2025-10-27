@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { LogIn, Eye, EyeOff } from 'lucide-react';
 import EcolavLogo from './EcolavLogo';
-import { getApiBaseUrl } from '../config';
 import AnimatedLoginBackground from './AnimatedLoginBackground';
 
 const Login: React.FC = () => {
